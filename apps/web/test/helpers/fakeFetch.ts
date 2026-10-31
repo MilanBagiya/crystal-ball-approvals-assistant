@@ -32,5 +32,30 @@ export function mockFetch(...responses: (Response | Error | (() => Response))[])
   });
 }
 
+/** A fetch mock that answers by URL; each handler is called per request. */
+export function routeFetch(routes: Record<string, () => Response | Error>) {
+  return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const handler = routes[String(input)];
+    if (!handler) throw new Error(`routeFetch: no route for ${String(input)}`);
+    if (init?.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    const result = handler();
+    if (result instanceof Error) throw result;
+    return result;
+  });
+}
+
+export const seedApprovals = [
+  { id: 'a1', title: 'Site Patrol Onboarding & Checklists', type: 'folder' },
+  { id: 'a2', title: 'Level 2 Drone Patrol Video Demo', type: 'video' },
+  { id: 'a3', title: 'Safety Equipment & Sensor Specs', type: 'pdf' },
+  { id: 'a4', title: '360° Spatial Zone Layout & Camera Map', type: 'image' },
+].map((item) => ({
+  ...item,
+  submittedBy: 'Sam HelpAdmin',
+  path: 'Site Recordings › Site Recordings',
+  status: 'pending_review',
+  submittedAt: '2026-09-18',
+}));
+
 /** Lets pending promise callbacks (stream reads, state updates) run. */
 export const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
