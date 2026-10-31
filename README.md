@@ -84,10 +84,19 @@ Current totals: **244 API tests and 45 web tests**. Coverage: API 96.6% statemen
 83.5%. Every feature was built test-first: the history shows a failing `test(...) (red)` commit before each
 `feat(...) (green)` commit.
 
-**Live model testing.** This project was built and tested without a live API key. The real Anthropic path is covered by
-SDK-level tests with a mocked network (`anthropicLlmClient.test.ts`), and every action was run manually in no-key and
-`FORCE_LLM_FAILURE` modes. To see live model output, add your own `ANTHROPIC_API_KEY` to `.env` and restart
-`npm run dev`.
+**Live model testing.** Claude was not run live (no API key was used). The real Anthropic path is covered by SDK-level
+tests with a mocked network (`anthropicLlmClient.test.ts`), and every action was run manually in no-key and
+`FORCE_LLM_FAILURE` modes. To see Claude's output, add your own `ANTHROPIC_API_KEY` to `.env` and restart `npm run dev`.
+
+All five actions were also run live against a small local model (`qwen2.5:3b` via Ollama, on a laptop GPU):
+
+- Greeting, Talk and Teach returned valid AI answers in about a second.
+- Help streamed sources and an answer, but the 3B model once named the wrong escalation contact. The right one was in
+  its prompt, which is a model-size limit rather than a retrieval problem.
+- Summary prompt 1.0.0 failed completely: the model echoed the queue back, so every line was rejected and the standard
+  ranking was shown. That led to **summary prompt 1.1.0**, which gives the model a fill-in template built from the
+  deterministic ranking. Over three runs, 8 of 12 items came from the model (up from 0). The parser now also rejects
+  lines where the model left the `FILL_IN` placeholder, which happened in the remaining cases.
 
 The LLM is always a fake in tests: hand-rolled `LlmClient` fakes that stream, hang, stall mid-answer or fail. The real
 Anthropic client is tested through the actual SDK with a fake `fetch`, so no test needs a network or a key.
