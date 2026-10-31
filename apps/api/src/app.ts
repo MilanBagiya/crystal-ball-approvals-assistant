@@ -10,6 +10,7 @@ import type { UsageLogger } from './llm/usageLog';
 import type { Logger } from './logging/logger';
 import { aiRoutes, type AiServices } from './routes/ai';
 import { systemRoutes } from './routes/system';
+import { createChatService } from './services/chatService';
 import { createGreetingService } from './services/greetingService';
 import { createHelpService } from './services/helpService';
 import { createSummaryService } from './services/summaryService';
@@ -37,6 +38,7 @@ export function createApp(deps: AppDeps): Express {
     greeting: createGreetingService({ runner, approvals: deps.approvals, logger: deps.logger }),
     summary: createSummaryService({ runner, approvals: deps.approvals, logger: deps.logger }),
     help: createHelpService({ runner, policyChunks: deps.policyChunks }),
+    chat: createChatService({ runner, approvals: deps.approvals, policyChunks: deps.policyChunks }),
   };
 
   app.use('/api', systemRoutes(deps));
