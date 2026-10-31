@@ -10,12 +10,13 @@ import { z } from 'zod';
 import { fallbackHeadline, fallbackReason, formatRankedQueue } from '../domain/summaryFallback';
 import type { RankedApproval } from '../domain/urgency';
 import { toFallbackReason } from '../llm/errors';
+import { SUMMARY_FILL_IN } from '../prompts/summary.v1.1';
 
 // Streaming + structured output at once: the model writes NDJSON, and each line is parsed, validated and
 // emitted as soon as it is complete. The model explains the deterministic order; it can never change it.
 
 export type RejectionReason =
-  'invalid_json' | 'schema' | 'unknown_id' | 'duplicate' | 'wrong_rank' | 'wrong_urgency' | 'wrong_count';
+  'invalid_json' | 'schema' | 'unfilled' | 'unknown_id' | 'duplicate' | 'wrong_rank' | 'wrong_urgency' | 'wrong_count';
 
 export interface Rejection {
   reason: RejectionReason;
@@ -53,6 +54,9 @@ function createLineValidator(ranked: readonly RankedApproval[]) {
     }
     const parsed = SummaryLineSchema.safeParse(json);
     if (!parsed.success) return reject('schema', line);
+    // A template line the model copied without writing its own text explains nothing.
+    const text = parsed.data.type === 'headline' ? parsed.data.text : parsed.data.reason;
+    if (text.includes(SUMMARY_FILL_IN)) return reject('unfilled', line);
 
     if (parsed.data.type === 'headline') {
       if (headlineAccepted) return reject('duplicate', line);
