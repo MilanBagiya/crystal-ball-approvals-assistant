@@ -1,10 +1,20 @@
 # Approvals AI Assistant
 
-A working rebuild of the **"Approvals" assistant panel** from a digital-twin dashboard: a Next.js UI with a floating
-assistant, backed by an Express API that calls Claude server-side. Every AI action has a deterministic, non-AI fallback,
-so a missing API key or a slow model never breaks the UI.
+A working rebuild of the **"Approvals" assistant panel** from a digital-twin dashboard. A Next.js page shows the
+approvals queue with a floating assistant; an Express API calls Claude server-side. The panel has five actions:
 
-> _Screenshot / GIF of the panel: added in phase 7._
+| Action                 | What it does                                                      | Output                                      |
+| ---------------------- | ----------------------------------------------------------------- | ------------------------------------------- |
+| **Present me Summary** | Explains the pending queue, most urgent first                     | Streamed NDJSON, each item validated by Zod |
+| **Talk to me**         | Free multi-turn chat about the queue                              | Streamed text                               |
+| **Help me**            | Answers operational questions only from the policy (mini RAG)     | Sources, then streamed text                 |
+| **Teach me**           | Step-by-step guide to reviewing an approval, adapts to follow-ups | Streamed text                               |
+| **Replay Greeting**    | Short context-aware greeting ("4 items waiting…")                 | JSON, validated by Zod                      |
+
+Every action has a deterministic, non-AI fallback. No API key, a timeout, a model error or invalid model output never
+breaks the UI: the user always gets a usable answer, marked "AI unavailable, showing a standard answer".
+
+> _Screenshot / GIF of the panel: to be added._ <!-- TODO(Milan): add a screenshot of the panel -->
 
 ## 1. Setup
 
@@ -12,63 +22,151 @@ Requirements: **Node 22+** (developed on Node 24) and npm 10+.
 
 ```bash
 npm install
-cp .env.example .env        # then set ANTHROPIC_API_KEY (optional: the app works without it, using fallbacks)
-npm run dev                 # starts the API on :4000 and the web app on :3000
+cp .env.example .env    # optional: set ANTHROPIC_API_KEY. Without it, every action uses its fallback.
+npm run dev             # starts the API on :4000 and the web app on :3000
 ```
 
-Open http://localhost:3000. The web app proxies `/api/*` to the API, so the browser never needs CORS or the key.
+Open http://localhost:3000. The web app proxies `/api/*` to the API, so the browser never sees the key or needs CORS.
+If port 3000 is taken, run `WEB_PORT=3100 npm run dev` (or set `WEB_PORT` in `.env`).
 
-| Variable             | Default            | Purpose                                                                          |
-| -------------------- | ------------------ | -------------------------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY`  | _(empty)_          | Server-side only. Empty means every action uses its fallback.                    |
-| `ANTHROPIC_MODEL`    | `claude-haiku-5-5` | Fast and cheap; overridable.                                                     |
-| `LLM_TIMEOUT_MS`     | `8000`             | Total timeout for non-streaming calls; first-token and idle timeout for streams. |
-| `FORCE_LLM_FAILURE`  | `false`            | Demo switch that forces the fallback path.                                       |
-| `RATE_LIMIT_PER_MIN` | `20`               | Per-session limit on `/api/ai/*`.                                                |
-| `API_PORT`           | `4000`             | Express port.                                                                    |
+| Variable             | Default            | Purpose                                                                        |
+| -------------------- | ------------------ | ------------------------------------------------------------------------------ |
+| `ANTHROPIC_API_KEY`  | _(empty)_          | Server-side only. Empty means every action uses its fallback.                  |
+| `ANTHROPIC_MODEL`    | `claude-haiku-5-5` | Fast and cheap for short tasks; overridable.                                   |
+| `LLM_TIMEOUT_MS`     | `8000`             | Total timeout for the greeting; first-token and idle timeout for streams.      |
+| `FORCE_LLM_FAILURE`  | `false`            | Demo switch: forces the fallback path even when a key is set.                  |
+| `RATE_LIMIT_PER_MIN` | `20`               | Requests per minute per session on `/api/ai/*` (each IP is capped at 5× this). |
+| `API_PORT`           | `4000`             | Express port. `npm run dev` points the web proxy at it automatically.          |
+| `WEB_PORT`           | `3000`             | Next.js port for `npm run dev`.                                                |
+
+The server checks its environment and seed data at startup and refuses to start with a readable error if either is
+invalid (e.g. `LLM_TIMEOUT_MS=abc`, or an unknown `type` in `approvals.json`).
 
 ## 2. Testing
 
 ```bash
-npm test            # API (Jest + Supertest) then web (Vitest + Testing Library)
+npm test               # API (Jest + Supertest), then web (Vitest + Testing Library)
 npm run test:api
 npm run test:web
 npm run coverage
-npm run typecheck   # strict tsc across all workspaces
+npm run typecheck      # strict tsc in every workspace
+npm run lint           # ESLint (no `any` allowed)
+npm run format:check   # Prettier
 ```
 
-> _What each test file proves: filled in as the tests land._
+The LLM is always a fake in tests: hand-rolled `LlmClient` fakes that stream, hang, stall mid-answer or fail. The real
+Anthropic client is tested through the actual SDK with a fake `fetch`, so no test needs a network or a key.
+
+**API: unit tests** (`apps/api/test/unit`)
+
+| File                                                                                      | What it proves                                                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `summaryParser.test.ts`                                                                   | The core of structured streaming: valid NDJSON becomes validated events in order; lines split across chunks (even one character at a time) are joined; unknown ids, wrong ranks or urgencies, duplicates, broken JSON and schema violations are dropped and logged; missing items get deterministic fallbacks; all-invalid output becomes a full fallback; items already sent survive a mid-stream timeout. |
+| `urgency.test.ts`                                                                         | The safety PDF ranks first; order is the same whatever the input order; ties break by date, then title.                                                                                                                                                                                                                                                                                                     |
+| `retrieval.test.ts`                                                                       | Policy chunks on `##` headings; "safety specs" finds the safety chunk first; off-topic questions fall below the threshold.                                                                                                                                                                                                                                                                                  |
+| `helpService.test.ts`                                                                     | Below the relevance threshold the LLM is **never called**; otherwise sources come first, then the answer, with a policy-text fallback.                                                                                                                                                                                                                                                                      |
+| `greetingService.test.ts`                                                                 | Valid model JSON → `source: 'ai'`. Invalid JSON, wrong shape, too long, a changed number, a timeout or an error → the template.                                                                                                                                                                                                                                                                             |
+| `withTimeout.test.ts`                                                                     | Calls are cut off at the timeout even if the model ignores its abort signal; first-token vs idle timeouts; partial output is kept; upstream is cancelled.                                                                                                                                                                                                                                                   |
+| `anthropicLlmClient.test.ts`                                                              | The real SDK path: request shape, text deltas, token usage, refusals and auth errors mapped to typed errors, key never leaked.                                                                                                                                                                                                                                                                              |
+| `usageLog.test.ts`                                                                        | Exactly one JSON usage line per LLM call (tokens, latency, outcome), whatever happens.                                                                                                                                                                                                                                                                                                                      |
+| `prompts.test.ts`                                                                         | Every prompt is versioned and grounded; user text can't break out of its delimiters.                                                                                                                                                                                                                                                                                                                        |
+| `contracts.test.ts`, `seedData.test.ts`, `config.test.ts`, `errorHandler.test.ts`, others | Schema edges, seed and env validation, no stack traces in 500s, SSE errors ending as fallback + done.                                                                                                                                                                                                                                                                                                       |
+
+**API: Supertest integration tests** (`apps/api/test/integration`)
+
+| File                     | What it proves                                                                                                                                              |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `summary.int.test.ts`    | Success: `text/event-stream`, headline, 4 items, `done`. Timeout: still `200`, `fallback` (`timeout`), then `done`. Garbage: `fallback` (`invalid_output`). |
+| `help.int.test.ts`       | `sources` then tokens; the fallback returns the policy text; off-topic questions make no LLM call.                                                          |
+| `chat.int.test.ts`       | Talk and Teach stream tokens with the queue injected server-side, and fall back to the ranked list or the 5-step guide.                                     |
+| `greeting.int.test.ts`   | Validated JSON response; the template on timeout.                                                                                                           |
+| `validation.int.test.ts` | Bad bodies on every endpoint return `400` in the error shape, before any LLM call.                                                                          |
+| `rateLimit.int.test.ts`  | `429` in the error shape per session; rotating session ids still hits the per-IP cap.                                                                       |
+| `noApiKey.int.test.ts`   | With no key, every AI endpoint still returns a usable `200`.                                                                                                |
+
+**Web** (`apps/web/test`)
+
+| File                                                                        | What it proves                                                                                                               |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `sseClient.test.ts`                                                         | Events split across chunks are parsed; invalid events are ignored; 429/400/500/network map to friendly errors; idle timeout. |
+| `ChatView.test.tsx`                                                         | Typing dots before the first token, text growing with a caret, error + Retry, 429 message, fallback notice and content.      |
+| `AssistantPanel.test.tsx`                                                   | Header, close button and 4 cards; close hides the panel and the floating button reopens it; focus moves between views.       |
+| `SummaryView.test.tsx`, `assistantStore.test.ts`, `ApprovalsTable.test.tsx` | Summary in rank order with fallback items marked; history trimmed to server limits; Retry doesn't duplicate messages.        |
 
 ## 3. Seeing the graceful degradation
 
-> _Phase 7: remove the key, set `FORCE_LLM_FAILURE=true`, or set `LLM_TIMEOUT_MS=1`, then try each action._
+Try each action in the panel after any of these (restart `npm run dev` after editing `.env`):
+
+| Setting                             | What you'll see                                                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| No `ANTHROPIC_API_KEY`              | Template greeting, ranked-list summary, policy-text answers, the 5-step guide. `/api/health` says `not_configured`. |
+| `FORCE_LLM_FAILURE=true`            | The same, even with a valid key.                                                                                    |
+| `LLM_TIMEOUT_MS=1` (with a key)     | Every call times out; fallbacks are marked `timeout`.                                                               |
+| Stop the API while the page is open | An error with a **Retry** button (no frozen spinner: the client gives up after 15 s idle).                          |
+| Ask Help something off-topic        | "The policy doesn't cover this…", answered without calling the model.                                               |
+
+Every LLM call writes one JSON line to the API console, for example:
+`{"event":"llm_call","promptId":"summary","promptVersion":"1.0.0","model":"claude-haiku-5-5","inputTokens":512,"outputTokens":180,"latencyMs":1430,"outcome":"ok"}`.
 
 ## 4. Architecture
 
 ```
-UI → Zustand store → SSE client → Express route → Zod validation → service → LlmClient → Claude
+Browser ── UI components ── Zustand store ── SSE client ──▶ Next.js /api proxy
+                                                               │
+Express: rate limit ─▶ Zod body validation ─▶ route ─▶ service ─▶ LlmRunner (timeouts + usage log) ─▶ LlmClient ─▶ Claude
+                                                        │                                               │
+                                       deterministic logic (urgency, retrieval,          UnavailableLlmClient when there's
+                                       templates) and fallbacks                          no key or FORCE_LLM_FAILURE=true
 ```
+
+- Routes are thin: validate, call a service, send a validated response. No prompts or LLM calls in handlers.
+- Every SSE event is validated against `StreamEventSchema` on the server before it's written, and again in the browser
+  before it's used. The UI never renders raw model text that hasn't passed a schema.
+- Once a stream has started, any failure becomes a `fallback` event followed by `done`, never an HTTP error.
 
 ```
 apps/
-  web/            Next.js (App Router) + React + Tailwind + Zustand, tested with Vitest
-  api/            Express + TypeScript, tested with Jest + Supertest
-packages/
-  contracts/      Zod schemas + inferred types shared by web and api (consumed as TS source, no build step)
-data/
-  approvals.json  seeded queue
-  policy.md       approval policy note, the retrieval source for "Help me"
+  api/src/
+    routes/        thin Express handlers (system: health, approvals; ai: greeting, summary, help, chat)
+    http/          Zod validation, SSE helper, error handler, rate limiter
+    services/      greeting, summary (+ NDJSON parser), help, chat
+    domain/        urgency ranking, policy chunks, retrieval, greeting template, summary fallbacks
+    llm/           LlmClient interface, Anthropic and unavailable clients, timeouts, runner, usage log
+    prompts/       versioned prompts and the active-version registry
+    content/       static Teach fallback guide
+  web/
+    components/    assistant panel and views, approvals table
+    store/         Zustand store
+    lib/           SSE client
+packages/contracts/  Zod schemas + types shared by both apps, and openapi.md (the endpoint contract)
+data/                approvals.json (seed queue) and policy.md (the Help source)
 ```
+
+See [`packages/contracts/openapi.md`](packages/contracts/openapi.md) for each endpoint's request, events and errors.
 
 ## 5. AI judgment note
 
-> _Draft to come; written and edited by Milan._
+<!-- TODO(Milan): this is a draft. Edit it into your own words before submitting. -->
+
+**AI-necessary.** _Talk to me_ and _Teach me_ handle open-ended language and follow-ups; a template can't hold a
+conversation. _Help me_ needs the model to phrase a grounded answer, but only from retrieved policy text.
+
+**AI-optional.** _Replay Greeting_ is already complete as a template; the model only improves the tone, and its output
+is rejected if it changes any number. The _Summary ranking_ is decided in code by a documented rule, because the data
+can't support an AI judgment on urgency; the model only explains the order, and the server rejects any line whose id,
+rank or urgency differs from the rule.
+
+**Fallback design.** Every call has an 8 s budget: total for the greeting, and first-token plus idle timeouts for
+streams, so a slow but steady answer isn't cut off. Each action has its own deterministic fallback (template, ranked
+list, policy text, 5-step guide), and partial text stays visible when a stream fails. Structured output is validated with
+Zod on the server and SSE events again in the browser, so the UI never trusts raw model text. Help doesn't call the
+model at all when retrieval finds nothing relevant, which saves cost and stops it guessing.
+
+**With more time:** a promptfoo eval suite that runs the summary and help prompts against fixed queues and questions on
+every prompt change, so a new prompt version has to beat the old one before it ships.
 
 ## 6. Assumptions and challenged requirements
 
-- **Express over Next.js route handlers:** the brief requires Supertest integration tests, and Supertest drives an
-  Express app directly through an injectable `createApp({ llm, config })` factory.
-- **TypeScript 6, not 7:** `ts-jest` supports TypeScript `<7`, so the repo pins 6.0.3.
 - **Urgency can't be derived from the data.** All four items share a date and there is no priority field, so
   [`domain/urgency.ts`](apps/api/src/domain/urgency.ts) applies a documented, deterministic rule. A title goes in the
   first tier with a whole-word keyword match (simple plurals count):
@@ -78,18 +176,35 @@ data/
   4. Anything else is `low` and goes last. Ties are broken by oldest `submittedAt`, then title, then id.
 
   For the seed this gives **a3 → a2 → a1 → a4**. The demo video (a2) ranks above the onboarding folder (a1) because
-  "Patrol" puts it in the operational tier and the title tie-break ("Level…" < "Site…") decides. The model explains this
-  order but never decides it.
+  "Patrol" puts it in the operational tier and the title tie-break ("Level…" < "Site…") decides.
 
-- **Keyword retrieval instead of embeddings.** The policy has five sections, so term overlap plus a heading boost
-  finds the right chunk and is easy to explain and test. The trade-off is no synonyms: "after a year" doesn't match the
-  policy's "12 months". Embeddings (e.g. pgvector) would fix that.
-- _In-memory rate limiting, streamed NDJSON summary, and the deadline: filled in as built._
+- **Express over Next.js route handlers.** The brief requires Supertest integration tests, and Supertest drives an
+  Express app directly through the injectable `createApp({ llm, config, … })` factory.
+- **Keyword retrieval instead of pgvector.** The policy has five sections, so term overlap plus a heading boost finds
+  the right chunk and is easy to explain and test. The trade-off is no synonyms: "after a year" doesn't match the
+  policy's "12 months". Embeddings would fix that.
+- **In-memory rate limiting.** Fine for one process. Production with several instances would use a shared store such as
+  Redis. The session id is chosen by the client, so each IP is also capped at 5× the per-session limit.
+- **Structured output vs. streaming.** The summary streams NDJSON: each complete line is parsed, validated and sent as
+  soon as it arrives, so the list appears item by item while every item is still schema-checked.
+- **TypeScript 6, not 7.** `ts-jest` supports TypeScript `<7`, so the repo pins 6.0.3.
+- **Model settings.** Haiku 5.5 with thinking off and low effort: every task here is short and latency-sensitive.
+- **Deadline.** The email said 24 hours and the document said 5 days. <!-- TODO(Milan): state the deadline you worked to. -->
 
 ## 7. AI tool usage
 
-> _To be written by Milan._
+<!-- TODO(Milan): write this section yourself, truthfully. For example: "Built with Claude Code from a plan I wrote.
+I reviewed every change, and I designed / adjusted X and Y myself." -->
+
+_To be written by Milan._
 
 ## 8. Prompt versioning
 
-> _Prompts live in `apps/api/src/prompts/*.v1.ts`; details added in phase 4/5._
+Prompts live only in [`apps/api/src/prompts/`](apps/api/src/prompts/), one file per prompt and version
+(`greeting.v1.ts`, `summary.v1.ts`, `help.v1.ts`, `talk.v1.ts`, `teach.v1.ts`). Each exports an object with an `id`,
+a semver `version`, the system prompt and a builder for the user message. [`prompts/index.ts`](apps/api/src/prompts/index.ts)
+is the registry of active versions.
+
+To change a prompt, add a new file (e.g. `summary.v2.ts`) with a bumped `version`, point the registry at it, and run
+the tests. The old version stays in the repo for comparison and rollback. Every usage log line records `promptId` and
+`promptVersion`, so outputs and costs can be traced to the exact prompt that produced them.
