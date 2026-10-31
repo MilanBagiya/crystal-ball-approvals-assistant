@@ -179,3 +179,31 @@ describe('greeting', () => {
     expect(store().greeting.text).toMatch(/Approvals assistant/);
   });
 });
+
+describe("the operator's language", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('sends the browser language with summary and greeting requests', async () => {
+    vi.spyOn(navigator, 'language', 'get').mockReturnValue('hi-IN');
+    const fetchFn = mockFetch(controllableStream().response, jsonResponse(200, { greeting: 'नमस्ते!', source: 'ai' }));
+    vi.stubGlobal('fetch', fetchFn);
+
+    void store().runSummary();
+    await flush();
+    expect(lastBody(fetchFn)).toEqual({ language: 'hi-IN' });
+
+    await store().loadGreeting();
+    expect(lastBody(fetchFn)).toMatchObject({ language: 'hi-IN' });
+  });
+
+  it('falls back to English when the browser language is missing or not a sensible code', async () => {
+    vi.spyOn(navigator, 'language', 'get').mockReturnValue('');
+    const fetchFn = mockFetch(controllableStream().response);
+    vi.stubGlobal('fetch', fetchFn);
+
+    void store().runSummary();
+    await flush();
+
+    expect(lastBody(fetchFn)).toEqual({ language: 'en' });
+  });
+});

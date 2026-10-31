@@ -82,3 +82,65 @@ describe('SummaryView', () => {
     expect(screen.queryByText('AI unavailable, showing a standard answer')).not.toBeInTheDocument();
   });
 });
+
+describe('Read aloud', () => {
+  // jsdom has no speech engine, so the Web Speech API is faked here.
+  function fakeSpeech() {
+    const spoken: { text: string; lang: string }[] = [];
+    class FakeUtterance {
+      lang = '';
+      onend: (() => void) | null = null;
+      constructor(public text: string) {}
+    }
+    const synth = {
+      speak: vi.fn((u: FakeUtterance) => spoken.push({ text: u.text, lang: u.lang })),
+      cancel: vi.fn(),
+    };
+    vi.stubGlobal('SpeechSynthesisUtterance', FakeUtterance);
+    vi.stubGlobal('speechSynthesis', synth);
+    return { spoken, synth };
+  }
+
+  async function finishedSummary() {
+    const stream = await openSummary();
+    stream.push({ type: 'summary_headline', text: 'Start with the safety specs.', pendingCount: 4, source: 'ai' });
+    stream.push({ type: 'summary_item', id: 'a3', rank: 1, urgency: 'high', reason: '24h SLA.', source: 'ai' });
+    stream.push({ type: 'done' });
+    stream.close();
+    return screen.findByRole('button', { name: 'Read aloud' });
+  }
+
+  it('reads the headline and each item, in the browser language', async () => {
+    const { spoken } = fakeSpeech();
+    vi.spyOn(navigator, 'language', 'get').mockReturnValue('en-IN');
+
+    await userEvent.setup().click(await finishedSummary());
+
+    expect(spoken).toHaveLength(1);
+    expect(spoken[0]?.lang).toBe('en-IN');
+    expect(spoken[0]?.text).toContain('Start with the safety specs.');
+    expect(spoken[0]?.text).toContain('1. Safety Equipment & Sensor Specs, high urgency. 24h SLA.');
+    vi.restoreAllMocks();
+  });
+
+  it('turns into a Stop button while speaking, and stops when pressed', async () => {
+    const { synth } = fakeSpeech();
+    const user = userEvent.setup();
+
+    await user.click(await finishedSummary());
+    await user.click(screen.getByRole('button', { name: 'Stop reading' }));
+
+    expect(synth.cancel).toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Read aloud' })).toBeInTheDocument();
+  });
+
+  it('is not offered when the browser cannot speak', async () => {
+    const stream = await openSummary();
+    stream.push({ type: 'summary_headline', text: 'Start with the safety specs.', pendingCount: 4, source: 'ai' });
+    stream.push({ type: 'done' });
+    stream.close();
+
+    await screen.findByText('Start with the safety specs.');
+    expect(screen.queryByRole('button', { name: 'Read aloud' })).not.toBeInTheDocument();
+  });
+});
