@@ -69,7 +69,22 @@ data/
 - **Express over Next.js route handlers:** the brief requires Supertest integration tests, and Supertest drives an
   Express app directly through an injectable `createApp({ llm, config })` factory.
 - **TypeScript 6, not 7:** `ts-jest` supports TypeScript `<7`, so the repo pins 6.0.3.
-- _Urgency rule, keyword retrieval, in-memory rate limiting, streamed NDJSON summary, and the deadline: filled in as built._
+- **Urgency can't be derived from the data.** All four items share a date and there is no priority field, so
+  [`domain/urgency.ts`](apps/api/src/domain/urgency.ts) applies a documented, deterministic rule. A title goes in the
+  first tier with a whole-word keyword match (simple plurals count):
+  1. **Safety** (`high`): `safety`, `sensor`, `emergency`, `hazard`
+  2. **Operational** (`medium`): `onboarding`, `checklist`, `patrol`
+  3. **Reference** (`low`): `layout`, `map`, `demo`
+  4. Anything else is `low` and goes last. Ties are broken by oldest `submittedAt`, then title, then id.
+
+  For the seed this gives **a3 → a2 → a1 → a4**. The demo video (a2) ranks above the onboarding folder (a1) because
+  "Patrol" puts it in the operational tier and the title tie-break ("Level…" < "Site…") decides. The model explains this
+  order but never decides it.
+
+- **Keyword retrieval instead of embeddings.** The policy has five sections, so term overlap plus a heading boost
+  finds the right chunk and is easy to explain and test. The trade-off is no synonyms: "after a year" doesn't match the
+  policy's "12 months". Embeddings (e.g. pgvector) would fix that.
+- _In-memory rate limiting, streamed NDJSON summary, and the deadline: filled in as built._
 
 ## 7. AI tool usage
 
