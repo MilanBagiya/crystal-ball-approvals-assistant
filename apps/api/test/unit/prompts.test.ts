@@ -1,5 +1,8 @@
+import { SummaryHeadlineSchema, SummaryItemSchema } from '@approvals/contracts';
 import { rankApprovals } from '../../src/domain/urgency';
 import { activePrompts } from '../../src/prompts';
+import { SUMMARY_FILL_IN } from '../../src/prompts/summary.v1.1';
+import { summaryPromptV1 } from '../../src/prompts/summary.v1';
 import { seedApprovals } from '../fixtures/approvals';
 
 const ranked = rankApprovals(seedApprovals());
@@ -37,6 +40,39 @@ describe('summary prompt', () => {
       expect(message).toContain(`"urgency":"${r.urgency}"`);
     }
     expect(message).toContain('"pendingCount":4');
+  });
+
+  describe('version 1.1.0: a fill-in template built from the real queue', () => {
+    const templateLines = message
+      .split('\n')
+      .filter((line) => line.startsWith('{"type":'))
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+
+    it('is the active summary prompt, with 1.0.0 kept for comparison', () => {
+      expect(activePrompts.summary.version).toBe('1.1.0');
+      expect(summaryPromptV1.version).toBe('1.0.0');
+    });
+
+    it('lists the headline, then one line per item with id, rank and urgency already filled, in rank order', () => {
+      expect(templateLines[0]).toEqual({ type: 'headline', text: SUMMARY_FILL_IN, pendingCount: 4 });
+      expect(templateLines.slice(1)).toEqual(
+        ranked.map((r) => ({ type: 'item', id: r.item.id, rank: r.rank, urgency: r.urgency, reason: SUMMARY_FILL_IN })),
+      );
+    });
+
+    it('produces valid summary lines once the model replaces FILL_IN with text', () => {
+      const filled = templateLines.map((line) =>
+        JSON.parse(JSON.stringify(line).replaceAll(SUMMARY_FILL_IN, 'A short explanation.')),
+      );
+
+      expect(SummaryHeadlineSchema.safeParse(filled[0]).success).toBe(true);
+      for (const line of filled.slice(1)) expect(SummaryItemSchema.safeParse(line).success).toBe(true);
+    });
+
+    it('tells the model to output only the completed lines, not to repeat the input', () => {
+      expect(activePrompts.summary.system).toMatch(/replace every FILL_IN/i);
+      expect(activePrompts.summary.system).toMatch(/do not repeat the queue/i);
+    });
   });
 });
 

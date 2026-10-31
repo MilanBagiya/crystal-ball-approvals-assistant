@@ -102,6 +102,8 @@ describe('summaryEvents: rejected lines', () => {
     ['a schema violation', item('a3', 1, 'critical'), 'schema'],
     ['a reason over 240 characters', item('a3', 1, 'high', 'x'.repeat(241)), 'schema'],
     ['broken JSON', '{"type":"item","id":"a3",', 'invalid_json'],
+    // The 1.1.0 prompt sends a template; a line the model copied without filling in is not an explanation.
+    ['a template line left unfilled', item('a3', 1, 'high', 'FILL_IN'), 'unfilled'],
   ])('drops %s and fills that item in deterministically', async (_label, badLine, reason) => {
     const lines = [headline, badLine, ...VALID.slice(2)];
 
@@ -127,6 +129,12 @@ describe('summaryEvents: rejected lines', () => {
 
     expect(rejections).toEqual([expect.objectContaining({ reason: 'wrong_count' })]);
     expect(events.find((e) => e.type === 'summary_headline')).toMatchObject({ pendingCount: 4, source: 'fallback' });
+  });
+
+  it('drops an unfilled template headline', async () => {
+    const { rejections } = await run([ndjson([{ ...headline, text: 'FILL_IN' }, ...VALID.slice(1)])]);
+
+    expect(rejections).toEqual([expect.objectContaining({ reason: 'unfilled' })]);
   });
 });
 
