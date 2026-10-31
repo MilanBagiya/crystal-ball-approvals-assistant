@@ -40,6 +40,28 @@ describe('greetingService', () => {
     expect(llm.requests[0]?.messages.at(-1)?.content).toContain(TEMPLATE);
   });
 
+  it('tells the model which item is most urgent, so it has something new to say', async () => {
+    const llm = fakeLlm(['{"greeting":"Hi! 4 items."}']);
+    await service(llm).greet();
+
+    expect(llm.requests[0]?.messages.at(-1)?.content).toContain('Most urgent item: Safety Equipment & Sensor Specs');
+  });
+
+  it('accepts a greeting that names the most urgent item', async () => {
+    const { greet } = service(
+      fakeLlm(['{"greeting":"Good afternoon! 4 items need you, starting with Safety Equipment & Sensor Specs."}']),
+    );
+
+    await expect(greet()).resolves.toMatchObject({ source: 'ai' });
+  });
+
+  it('labels a greeting the model copied unchanged as the template, because that is what it is', async () => {
+    const { greet, logs } = service(fakeLlm([JSON.stringify({ greeting: ` ${TEMPLATE.toLowerCase()} ` })]));
+
+    await expect(greet()).resolves.toEqual({ greeting: TEMPLATE, source: 'template' });
+    expect(logs).toMatchObject([{ level: 'info', event: 'greeting_unchanged' }]);
+  });
+
   it.each([
     ['text that is not JSON', 'Good afternoon, you have 4 items!'],
     ['JSON with the wrong shape', '{"message":"Hi! 4 items."}'],

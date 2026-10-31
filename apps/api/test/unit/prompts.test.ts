@@ -4,6 +4,8 @@ import { activePrompts } from '../../src/prompts';
 import { SUMMARY_FILL_IN } from '../../src/prompts/summary.v1.1';
 import { summaryPromptV1 } from '../../src/prompts/summary.v1';
 import { teachPromptV1 } from '../../src/prompts/teach.v1';
+import { greetingPromptV1 } from '../../src/prompts/greeting.v1';
+import { helpPromptV1 } from '../../src/prompts/help.v1';
 import { seedApprovals } from '../fixtures/approvals';
 
 const ranked = rankApprovals(seedApprovals());
@@ -100,6 +102,14 @@ describe('help prompt', () => {
 
     expect(message.match(/<\/question>/g)).toHaveLength(1);
   });
+
+  it('1.1.0 makes the model quote the policy sentence first, and use names and roles exactly as written', () => {
+    // A small model answered from the right excerpt but named the wrong contact; quoting first keeps it on the text.
+    expect(activePrompts.help.version).toBe('1.1.0');
+    expect(helpPromptV1.version).toBe('1.0.0');
+    expect(activePrompts.help.system).toMatch(/start with the exact sentence/i);
+    expect(activePrompts.help.system).toMatch(/names and roles exactly as written/i);
+  });
 });
 
 describe('chat prompts', () => {
@@ -137,5 +147,20 @@ describe('greeting prompt', () => {
     expect(activePrompts.greeting.system).toMatch(/\{"greeting"/);
     expect(activePrompts.greeting.system).toMatch(/keep every number/i);
     expect(message).toContain('You have 4 items waiting for review');
+  });
+
+  it('1.1.0 asks for new wording rather than a copy, and offers the most urgent item to mention', () => {
+    // A small model returned the 1.0.0 template word for word, which made the AI step invisible.
+    const message = activePrompts.greeting.buildUserMessage({
+      template: 'Good afternoon! You have 4 items waiting for review, including 1 safety document.',
+      language: 'en',
+      mostUrgentTitle: 'Safety Equipment & Sensor Specs',
+    });
+
+    expect(activePrompts.greeting.version).toBe('1.1.0');
+    expect(greetingPromptV1.version).toBe('1.0.0');
+    expect(activePrompts.greeting.system).toMatch(/in your own words/i);
+    expect(activePrompts.greeting.system).toMatch(/do not copy the template/i);
+    expect(message).toContain('Most urgent item: Safety Equipment & Sensor Specs');
   });
 });
