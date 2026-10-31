@@ -1,6 +1,6 @@
 'use client';
 
-import { GraduationCap, LifeBuoy, ListOrdered, MessageCircle, type LucideIcon } from 'lucide-react';
+import { GraduationCap, LifeBuoy, ListOrdered, MessagesSquare, type LucideIcon } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useAssistantStore, type View } from '@/store/assistantStore';
 
@@ -9,13 +9,39 @@ interface ActionCard {
   title: string;
   description: string;
   icon: LucideIcon;
+  /** Tailwind classes for the icon tile: background and icon colour. */
+  tone: string;
 }
 
 export const ACTION_CARDS: readonly ActionCard[] = [
-  { view: 'summary', title: 'Present me Summary', description: 'The queue, most urgent first', icon: ListOrdered },
-  { view: 'talk', title: 'Talk to me', description: 'Chat about your approvals', icon: MessageCircle },
-  { view: 'help', title: 'Help me', description: 'Answers from the policy', icon: LifeBuoy },
-  { view: 'teach', title: 'Teach me', description: 'How to review, step by step', icon: GraduationCap },
+  {
+    view: 'summary',
+    title: 'Present me Summary',
+    description: 'The queue, most urgent first',
+    icon: ListOrdered,
+    tone: 'bg-orange-100 text-orange-600',
+  },
+  {
+    view: 'talk',
+    title: 'Talk to me',
+    description: 'Chat about your approvals',
+    icon: MessagesSquare,
+    tone: 'bg-sky-100 text-sky-600',
+  },
+  {
+    view: 'help',
+    title: 'Help me',
+    description: 'Answers from the policy',
+    icon: LifeBuoy,
+    tone: 'bg-emerald-100 text-emerald-600',
+  },
+  {
+    view: 'teach',
+    title: 'Teach me',
+    description: 'How to review, step by step',
+    icon: GraduationCap,
+    tone: 'bg-violet-100 text-violet-600',
+  },
 ];
 
 /** The 2×2 grid of actions. `focusView` returns focus to the card the user came back from. */
@@ -35,7 +61,7 @@ export function HomeView({ focusView }: { focusView?: View }) {
 
   return (
     <div className="grid grid-cols-2 gap-3 px-4 py-3">
-      {ACTION_CARDS.map(({ view, title, description, icon: Icon }) => (
+      {ACTION_CARDS.map(({ view, title, description, icon: Icon, tone }) => (
         <button
           key={view}
           type="button"
@@ -43,13 +69,15 @@ export function HomeView({ focusView }: { focusView?: View }) {
             if (el) cardRefs.current.set(view, el);
           }}
           onClick={() => choose(view)}
-          className="flex flex-col items-start gap-2 rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-orange-300 hover:shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-500"
+          className="group flex flex-col items-center gap-2.5 rounded-2xl border border-slate-200 bg-white px-3 py-5 text-center transition hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500"
         >
-          <span className="grid size-9 place-items-center rounded-lg bg-orange-50 text-orange-600">
-            <Icon aria-hidden="true" className="size-5" />
+          <span
+            className={`grid size-16 place-items-center rounded-full transition group-hover:scale-105 ${tone}`}
+          >
+            <Icon aria-hidden="true" className="size-8" strokeWidth={1.75} />
           </span>
           <span className="text-sm font-semibold text-slate-900">{title}</span>
-          <span className="text-xs text-slate-500">{description}</span>
+          <span className="text-xs leading-snug text-slate-500">{description}</span>
         </button>
       ))}
     </div>
