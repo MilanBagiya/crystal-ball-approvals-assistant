@@ -135,7 +135,8 @@ export function AssistantPanel() {
         </button>
       </div>
 
-      <Greeting />
+      {/* The greeting belongs to the home view; action views use the space for the conversation. */}
+      {view === 'home' && <Greeting />}
 
       {view === 'home' ? <HomeView focusView={returnFocusTo} /> : <ActionView view={view} />}
 

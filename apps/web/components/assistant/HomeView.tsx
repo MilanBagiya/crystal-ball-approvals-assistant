@@ -71,9 +71,7 @@ export function HomeView({ focusView }: { focusView?: View }) {
           onClick={() => choose(view)}
           className="group flex flex-col items-center gap-2.5 rounded-2xl border border-slate-200 bg-white px-3 py-5 text-center transition hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500"
         >
-          <span
-            className={`grid size-16 place-items-center rounded-full transition group-hover:scale-105 ${tone}`}
-          >
+          <span className={`grid size-16 place-items-center rounded-full transition group-hover:scale-105 ${tone}`}>
             <Icon aria-hidden="true" className="size-8" strokeWidth={1.75} />
           </span>
           <span className="text-sm font-semibold text-slate-900">{title}</span>

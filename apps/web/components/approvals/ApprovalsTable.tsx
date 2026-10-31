@@ -1,20 +1,25 @@
 'use client';
 
-import type { ApprovalType } from '@approvals/contracts';
-import { FileText, Film, Folder, Image as ImageIcon, type LucideIcon } from 'lucide-react';
+import type { ApprovalItem } from '@approvals/contracts';
+import { ListFilter } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAssistantStore } from '@/store/assistantStore';
+import { shortDate, STATUS_LABELS, TYPE_STYLES } from './typeStyles';
 
-const TYPE_ICONS: Record<ApprovalType, LucideIcon> = { folder: Folder, video: Film, pdf: FileText, image: ImageIcon };
+interface ApprovalsTableProps {
+  query?: string;
+  selectedId?: string;
+  onSelect?: (id: string) => void;
+}
 
-const STATUS_LABELS: Record<string, string> = {
-  pending_review: 'Pending review',
-  approved: 'Approved',
-  rejected: 'Rejected',
-  changes_requested: 'Changes requested',
-};
+/** Case-insensitive match on title, submitter, path (folder) and type. */
+function matches(item: ApprovalItem, query: string): boolean {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  return [item.title, item.submittedBy, item.path, item.type].some((field) => field.toLowerCase().includes(needle));
+}
 
-export function ApprovalsTable() {
+export function ApprovalsTable({ query = '', selectedId, onSelect }: ApprovalsTableProps) {
   const approvals = useAssistantStore((s) => s.approvals);
   const loadApprovals = useAssistantStore((s) => s.loadApprovals);
 
@@ -22,14 +27,20 @@ export function ApprovalsTable() {
     if (approvals.status === 'idle') void loadApprovals();
   }, [approvals.status, loadApprovals]);
 
+  const visible = approvals.items.filter((item) => matches(item, query));
+
   return (
-    <section aria-labelledby="queue-heading" className="rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
-      <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
-        <h2 id="queue-heading" className="text-base font-semibold">
-          Pending approvals
+    <section
+      aria-labelledby="queue-heading"
+      className="flex min-h-0 flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200"
+    >
+      <div className="flex items-center gap-2.5 border-b border-slate-100 px-4 py-3">
+        <ListFilter aria-hidden="true" className="size-4 text-violet-600" />
+        <h2 id="queue-heading" className="text-xs font-semibold tracking-wide text-slate-700 uppercase">
+          Pending approval requests
         </h2>
         {approvals.status === 'done' && (
-          <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-700">
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
             {approvals.items.length} items
           </span>
         )}
@@ -47,43 +58,74 @@ export function ApprovalsTable() {
       )}
 
       {approvals.status === 'done' && (
-        <div className="overflow-x-auto">
+        <div className="min-h-0 overflow-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs text-slate-500 uppercase">
+            <thead className="sticky top-0 bg-slate-50 text-[11px] font-semibold tracking-wide text-slate-500 uppercase">
               <tr>
-                <th scope="col" className="px-4 py-2 font-medium">
-                  Item
+                <th scope="col" className="px-4 py-2.5">
+                  Folder / content name
                 </th>
-                <th scope="col" className="hidden px-4 py-2 font-medium md:table-cell">
-                  Location
+                <th scope="col" className="hidden px-3 py-2.5 md:table-cell">
+                  Type
                 </th>
-                <th scope="col" className="hidden px-4 py-2 font-medium sm:table-cell">
+                <th scope="col" className="hidden px-3 py-2.5 lg:table-cell">
                   Submitted by
                 </th>
-                <th scope="col" className="hidden px-4 py-2 font-medium sm:table-cell">
-                  Submitted
+                <th scope="col" className="hidden px-3 py-2.5 sm:table-cell">
+                  Date
                 </th>
-                <th scope="col" className="px-4 py-2 font-medium">
+                <th scope="col" className="px-4 py-2.5">
                   Status
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {approvals.items.map((item) => {
-                const Icon = TYPE_ICONS[item.type];
+              {visible.map((item) => {
+                const type = TYPE_STYLES[item.type];
+                const Icon = type.icon;
+                const selected = item.id === selectedId;
                 return (
-                  <tr key={item.id}>
-                    <td className="px-4 py-3 font-medium text-slate-900">
-                      <span className="inline-flex items-center gap-2">
-                        <Icon aria-label={item.type} className="size-4 shrink-0 text-slate-400" />
-                        {item.title}
+                  <tr
+                    key={item.id}
+                    onClick={() => onSelect?.(item.id)}
+                    className={`cursor-pointer transition-colors ${
+                      selected ? 'bg-violet-50/70 shadow-[inset_3px_0_0_var(--color-violet-500)]' : 'hover:bg-slate-50'
+                    }`}
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <span className={`grid size-9 shrink-0 place-items-center rounded-lg ${type.tile}`}>
+                          <Icon aria-hidden="true" className="size-4.5" />
+                        </span>
+                        <div className="min-w-0">
+                          <button
+                            type="button"
+                            aria-label={`Select ${item.title}`}
+                            aria-pressed={selected}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onSelect?.(item.id);
+                            }}
+                            className="block max-w-full truncate text-left font-semibold text-slate-900 hover:text-violet-700 focus-visible:outline-2 focus-visible:outline-violet-500"
+                          >
+                            {item.title}
+                          </button>
+                          <p className="truncate text-xs text-slate-500">{item.path}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="hidden px-3 py-3 md:table-cell">
+                      <span className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-0.5 text-xs text-slate-600">
+                        <Icon aria-hidden="true" className="size-3.5" />
+                        {type.label}
                       </span>
                     </td>
-                    <td className="hidden px-4 py-3 text-slate-600 md:table-cell">{item.path}</td>
-                    <td className="hidden px-4 py-3 text-slate-600 sm:table-cell">{item.submittedBy}</td>
-                    <td className="hidden px-4 py-3 text-slate-600 sm:table-cell">{item.submittedAt}</td>
+                    <td className="hidden px-3 py-3 text-slate-600 lg:table-cell">{item.submittedBy}</td>
+                    <td className="hidden px-3 py-3 whitespace-nowrap text-slate-600 sm:table-cell">
+                      {shortDate(item.submittedAt)}
+                    </td>
                     <td className="px-4 py-3">
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                      <span className="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-orange-700">
                         {STATUS_LABELS[item.status] ?? item.status}
                       </span>
                     </td>
@@ -92,6 +134,11 @@ export function ApprovalsTable() {
               })}
             </tbody>
           </table>
+          {visible.length === 0 && (
+            <p className="px-4 py-8 text-center text-sm text-slate-500">
+              No approvals match &quot;{query.trim()}&quot;.
+            </p>
+          )}
         </div>
       )}
     </section>

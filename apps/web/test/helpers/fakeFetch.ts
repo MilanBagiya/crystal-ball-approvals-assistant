@@ -44,6 +44,14 @@ export function routeFetch(routes: Record<string, () => Response | Error>) {
   });
 }
 
+// Mirrors data/approvals.json, so search and detail tests see the real submitters and folders.
+const SEED_DETAILS = {
+  a1: { submittedBy: 'Sam HelpAdmin', path: 'My Site Patrol › My Site Patrol Card' },
+  a2: { submittedBy: 'Alex HelpAdmin', path: 'Drawing-Videos › Drawing-Videos Card' },
+  a3: { submittedBy: 'Sam HelpAdmin', path: 'Site Recordings › Site Recordings' },
+  a4: { submittedBy: 'Elena HelpAdmin', path: 'Site Recordings › Site Recordings' },
+};
+
 export const seedApprovals = [
   { id: 'a1', title: 'Site Patrol Onboarding & Checklists', type: 'folder' },
   { id: 'a2', title: 'Level 2 Drone Patrol Video Demo', type: 'video' },
@@ -51,8 +59,7 @@ export const seedApprovals = [
   { id: 'a4', title: '360° Spatial Zone Layout & Camera Map', type: 'image' },
 ].map((item) => ({
   ...item,
-  submittedBy: 'Sam HelpAdmin',
-  path: 'Site Recordings › Site Recordings',
+  ...SEED_DETAILS[item.id as keyof typeof SEED_DETAILS],
   status: 'pending_review',
   submittedAt: '2026-09-18',
 }));
