@@ -5,9 +5,12 @@ import type { AppConfig } from './config/config';
 import type { PolicyChunk } from './domain/policyChunks';
 import { errorHandler, notFoundHandler } from './http/errorHandler';
 import type { LlmClient } from './llm/LlmClient';
+import { createLlmRunner } from './llm/llmRunner';
 import type { UsageLogger } from './llm/usageLog';
 import type { Logger } from './logging/logger';
+import { aiRoutes, type AiServices } from './routes/ai';
 import { systemRoutes } from './routes/system';
+import { createGreetingService } from './services/greetingService';
 
 export interface AppDeps {
   llm: LlmClient;
@@ -27,7 +30,13 @@ export function createApp(deps: AppDeps): Express {
   app.use(cors({ origin: 'http://localhost:3000' }));
   app.use(express.json({ limit: '32kb' }));
 
+  const runner = createLlmRunner({ llm: deps.llm, timeoutMs: deps.config.llmTimeoutMs, logUsage: deps.logUsage });
+  const services: AiServices = {
+    greeting: createGreetingService({ runner, approvals: deps.approvals, logger: deps.logger }),
+  };
+
   app.use('/api', systemRoutes(deps));
+  app.use('/api/ai', aiRoutes(services));
 
   app.use(notFoundHandler);
   app.use(errorHandler(deps.logger));
