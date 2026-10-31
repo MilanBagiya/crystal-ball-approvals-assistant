@@ -24,7 +24,15 @@ describe('createConsoleUsageLogger', () => {
     const lines: string[] = [];
     const log = createConsoleUsageLogger((line) => lines.push(line));
 
-    log({ ...prompt, model: 'm', inputTokens: 10, outputTokens: 20, latencyMs: 300, outcome: 'ok' });
+    log({
+      promptId: 'summary',
+      promptVersion: '1.0.0',
+      model: 'm',
+      inputTokens: 10,
+      outputTokens: 20,
+      latencyMs: 300,
+      outcome: 'ok',
+    });
 
     expect(lines).toHaveLength(1);
     expect(lines[0]).not.toContain('\n');
