@@ -4,6 +4,7 @@ import express, { type Express } from 'express';
 import type { AppConfig } from './config/config';
 import type { PolicyChunk } from './domain/policyChunks';
 import { errorHandler, notFoundHandler } from './http/errorHandler';
+import { aiRateLimiters } from './http/rateLimit';
 import type { LlmClient } from './llm/LlmClient';
 import { createLlmRunner } from './llm/llmRunner';
 import type { UsageLogger } from './llm/usageLog';
@@ -42,7 +43,8 @@ export function createApp(deps: AppDeps): Express {
   };
 
   app.use('/api', systemRoutes(deps));
-  app.use('/api/ai', aiRoutes(services, deps.logger));
+  // Rate limiting runs first, so over-limit requests never reach validation or the LLM.
+  app.use('/api/ai', ...aiRateLimiters(deps.config.rateLimitPerMin), aiRoutes(services, deps.logger));
 
   app.use(notFoundHandler);
   app.use(errorHandler(deps.logger));
