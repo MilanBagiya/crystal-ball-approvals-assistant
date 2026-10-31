@@ -18,14 +18,14 @@ npm run dev                 # starts the API on :4000 and the web app on :3000
 
 Open http://localhost:3000. The web app proxies `/api/*` to the API, so the browser never needs CORS or the key.
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | _(empty)_ | Server-side only. Empty means every action uses its fallback. |
-| `ANTHROPIC_MODEL` | `claude-haiku-5-5` | Fast and cheap; overridable. |
-| `LLM_TIMEOUT_MS` | `8000` | Total timeout for non-streaming calls; first-token and idle timeout for streams. |
-| `FORCE_LLM_FAILURE` | `false` | Demo switch that forces the fallback path. |
-| `RATE_LIMIT_PER_MIN` | `20` | Per-session limit on `/api/ai/*`. |
-| `API_PORT` | `4000` | Express port. |
+| Variable             | Default            | Purpose                                                                          |
+| -------------------- | ------------------ | -------------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`  | _(empty)_          | Server-side only. Empty means every action uses its fallback.                    |
+| `ANTHROPIC_MODEL`    | `claude-haiku-5-5` | Fast and cheap; overridable.                                                     |
+| `LLM_TIMEOUT_MS`     | `8000`             | Total timeout for non-streaming calls; first-token and idle timeout for streams. |
+| `FORCE_LLM_FAILURE`  | `false`            | Demo switch that forces the fallback path.                                       |
+| `RATE_LIMIT_PER_MIN` | `20`               | Per-session limit on `/api/ai/*`.                                                |
+| `API_PORT`           | `4000`             | Express port.                                                                    |
 
 ## 2. Testing
 
