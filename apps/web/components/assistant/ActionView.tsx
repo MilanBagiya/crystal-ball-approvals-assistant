@@ -28,9 +28,9 @@ export function ActionView({ view }: { view: Exclude<View, 'home'> }) {
         >
           <ArrowLeft aria-hidden="true" className="size-4" />
         </button>
-        <h2 ref={headingRef} tabIndex={-1} className="text-sm font-semibold text-slate-900 focus:outline-none">
+        <h3 ref={headingRef} tabIndex={-1} className="text-sm font-semibold text-slate-900 focus:outline-none">
           {title}
-        </h2>
+        </h3>
       </div>
       {view === 'summary' ? <SummaryView /> : <ChatView mode={view} />}
     </div>

@@ -56,7 +56,7 @@ export function SummaryView() {
                   {item.rank}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-sm font-semibold text-slate-900">{titleOf(item.id)}</h3>
+                  <h4 className="text-sm font-semibold text-slate-900">{titleOf(item.id)}</h4>
                   <div className="mt-1 flex flex-wrap gap-1.5 text-xs">
                     <span className={`rounded px-1.5 py-0.5 font-medium ${URGENCY_STYLES[item.urgency]}`}>
                       {item.urgency}

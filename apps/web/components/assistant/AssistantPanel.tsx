@@ -80,7 +80,7 @@ export function AssistantPanel() {
         <span className="grid size-9 place-items-center rounded-full bg-white/15">
           <Bot aria-hidden="true" className="size-5" />
         </span>
-        <h1 className="flex-1 text-base font-semibold">Approvals</h1>
+        <h2 className="flex-1 text-base font-semibold">Approvals</h2>
         <button
           type="button"
           aria-label="About this assistant"
