@@ -100,25 +100,33 @@ describe('streamWithTimeout', () => {
     expect(received).toEqual(['Part', 'ial']);
   });
 
-  it('allows a slow but steady stream whose total time exceeds the idle timeout', async () => {
-    // 5 chunks x 25ms = 125ms total, but no single gap reaches the 60ms idle timeout.
-    const llm = fakeLlm(['1', '2', '3', '4', '5'], { delayMs: 25 });
+  // Margins below are wide on purpose: timers can fire tens of ms late on a busy machine (e.g. with dev servers
+  // running), and these tests must only fail when the timeout logic is wrong.
 
-    await expect(collect(streamWithTimeout(llm, request(), streamTimeouts))).resolves.toHaveLength(5);
+  it('allows a slow but steady stream whose total time exceeds the idle timeout', async () => {
+    // 6 chunks x 30ms = 180ms total, more than the 150ms idle timeout, but no single gap comes close to it.
+    const llm = fakeLlm(['1', '2', '3', '4', '5', '6'], { delayMs: 30 });
+
+    await expect(collect(streamWithTimeout(llm, request(), { firstTokenMs: 150, idleMs: 150 }))).resolves.toHaveLength(
+      6,
+    );
   });
 
   it('uses the first-token timeout for the first chunk and the idle timeout afterwards', async () => {
-    // First chunk at ~40ms: fine with a 100ms first-token budget, though it would break a 20ms idle timeout.
-    const llm = fakeLlm(['slow start', ' then fast'], { delayMs: 40 });
+    // Chunks ~40ms apart: the first fits the 300ms first-token budget, the second breaks the 20ms idle budget.
+    const received: string[] = [];
+    const consume = async () => {
+      const llm = fakeLlm(['slow start', ' then fast'], { delayMs: 40 });
+      for await (const chunk of streamWithTimeout(llm, request(), { firstTokenMs: 300, idleMs: 20 })) {
+        received.push(chunk);
+      }
+    };
 
-    const first = await collect(streamWithTimeout(llm, request(), { firstTokenMs: 100, idleMs: 20 })).catch(
-      (error: unknown) => error,
-    );
+    await expect(consume()).rejects.toMatchObject({ kind: 'timeout' });
+    expect(received).toEqual(['slow start']); // so the timeout hit the second gap, not the first
 
-    // The second gap is also 40ms, which exceeds the 20ms idle budget.
-    expect(first).toMatchObject({ kind: 'timeout' });
     await expect(
-      collect(streamWithTimeout(fakeLlm(['a', 'b'], { delayMs: 40 }), request(), { firstTokenMs: 100, idleMs: 100 })),
+      collect(streamWithTimeout(fakeLlm(['a', 'b'], { delayMs: 40 }), request(), { firstTokenMs: 300, idleMs: 300 })),
     ).resolves.toEqual(['a', 'b']);
   });
 
