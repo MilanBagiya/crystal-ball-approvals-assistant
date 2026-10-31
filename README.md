@@ -90,13 +90,17 @@ tests with a mocked network (`anthropicLlmClient.test.ts`), and every action was
 
 All five actions were also run live against a small local model (`qwen2.5:3b` via Ollama, on a laptop GPU):
 
-- Greeting, Talk and Teach returned valid AI answers in about a second.
-- Help streamed sources and an answer, but the 3B model once named the wrong escalation contact. The right one was in
-  its prompt, which is a model-size limit rather than a retrieval problem.
-- Summary prompt 1.0.0 failed completely: the model echoed the queue back, so every line was rejected and the standard
-  ranking was shown. That led to **summary prompt 1.1.0**, which gives the model a fill-in template built from the
-  deterministic ranking. Over three runs, 8 of 12 items came from the model (up from 0). The parser now also rejects
-  lines where the model left the `FILL_IN` placeholder, which happened in the remaining cases.
+- Talk returned valid AI answers in about a second.
+- **Summary 1.0.0** failed completely: the model echoed the queue back, so every line was rejected and the standard
+  ranking was shown. **Summary 1.1.0** gives the model a fill-in template built from the deterministic ranking. Over
+  three runs, 8 of 12 items came from the model (up from 0), and later runs were fully AI-written. The parser also
+  rejects lines where the model left the `FILL_IN` placeholder.
+- **Help 1.0.0** named the wrong escalation contact even though the right one was in its excerpts. **Help 1.1.0**
+  makes the model quote the policy sentence before answering; it then answered correctly in 3 of 3 runs.
+- **Greeting 1.0.0** came back as an exact copy of the template. **Greeting 1.1.0** asks for new wording and offers the
+  most urgent item to mention. A greeting that still matches the template is now labelled `source: "template"`.
+- **Teach 1.0.0** used markdown bold and mentioned "the `<policy>` section". **Teach 1.1.0** asks for plain text and
+  keeps the prompt structure hidden, and the panel now renders any `**bold**` safely as bold text.
 
 The LLM is always a fake in tests: hand-rolled `LlmClient` fakes that stream, hang, stall mid-answer or fail. The real
 Anthropic client is tested through the actual SDK with a fake `fetch`, so no test needs a network or a key.
@@ -255,7 +259,8 @@ _[Add anything else you designed, changed or rejected yourself.]_
 ## 8. Prompt versioning
 
 Prompts live only in [`apps/api/src/prompts/`](apps/api/src/prompts/), one file per prompt and version
-(`greeting.v1.ts`, `summary.v1.ts`, `help.v1.ts`, `talk.v1.ts`, `teach.v1.ts`). Each exports an object with an `id`,
+(`greeting.v1.ts`, `summary.v1.ts`, `help.v1.ts`, `talk.v1.ts`, `teach.v1.ts`, plus `*.v1.1.ts` for greeting, summary,
+help and teach, which are the active versions). Each exports an object with an `id`,
 a semver `version`, the system prompt and a builder for the user message. [`prompts/index.ts`](apps/api/src/prompts/index.ts)
 is the registry of active versions.
 
