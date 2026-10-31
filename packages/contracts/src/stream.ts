@@ -8,13 +8,16 @@ export const FallbackReasonSchema = z.enum(['timeout', 'llm_error', 'invalid_out
 
 export const TokenEventSchema = z.object({ type: z.literal('token'), text: z.string().min(1) });
 
-export const SummaryHeadlineEventSchema = SummaryHeadlineSchema.omit({ type: true }).extend({
+// `type` is declared first so it is also the first key on the wire, which keeps raw SSE frames readable.
+export const SummaryHeadlineEventSchema = z.object({
   type: z.literal('summary_headline'),
+  ...SummaryHeadlineSchema.omit({ type: true }).shape,
   source: PartSourceSchema,
 });
 
-export const SummaryItemEventSchema = SummaryItemSchema.omit({ type: true }).extend({
+export const SummaryItemEventSchema = z.object({
   type: z.literal('summary_item'),
+  ...SummaryItemSchema.omit({ type: true }).shape,
   source: PartSourceSchema,
 });
 
