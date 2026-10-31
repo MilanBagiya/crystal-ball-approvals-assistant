@@ -101,6 +101,28 @@ describe('ChatView', () => {
     expect(screen.getByText(/Here's the current queue in priority order/)).toBeInTheDocument();
   });
 
+  it('offers suggested questions in an empty conversation and sends one when clicked', async () => {
+    const stream = controllableStream();
+    const fetchFn = routeFetch({
+      '/api/approvals': () => jsonResponse(200, { items: seedApprovals }),
+      '/api/ai/greeting': () => jsonResponse(200, { greeting: 'Hello!', source: 'template' }),
+      '/api/ai/help': () => stream.response,
+    });
+    vi.stubGlobal('fetch', fetchFn);
+    const user = userEvent.setup();
+    render(<AssistantPanel />);
+    await user.click(screen.getByRole('button', { name: /Help me/ }));
+
+    await user.click(screen.getByRole('button', { name: 'Who do I escalate an expired calibration to?' }));
+
+    expect(screen.getByText('Who do I escalate an expired calibration to?')).toBeInTheDocument();
+    expect(JSON.parse(String(fetchFn.mock.calls.at(-1)?.[1]?.body))).toMatchObject({
+      question: 'Who do I escalate an expired calibration to?',
+    });
+    // Suggestions disappear once the conversation has started.
+    expect(screen.queryByRole('group', { name: 'Suggested questions' })).not.toBeInTheDocument();
+  });
+
   it('disables Send while a reply is in progress', async () => {
     const { user } = await openTalk(() => controllableStream().response);
 
