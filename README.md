@@ -14,7 +14,9 @@ approvals queue with a floating assistant; an Express API calls Claude server-si
 Every action has a deterministic, non-AI fallback. No API key, a timeout, a model error or invalid model output never
 breaks the UI: the user always gets a usable answer, marked "AI unavailable, showing a standard answer".
 
-> _Screenshot / GIF of the panel: to be added._ <!-- TODO(Milan): add a screenshot of the panel -->
+![The Approvals & Review page with the assistant panel open on its home view](docs/screenshots/panel-desktop.png)
+
+On narrow screens the panel docks full-width at the bottom ([mobile screenshot](docs/screenshots/panel-mobile.png)).
 
 ## 1. Setup
 
@@ -53,6 +55,15 @@ npm run typecheck      # strict tsc in every workspace
 npm run lint           # ESLint (no `any` allowed)
 npm run format:check   # Prettier
 ```
+
+Current totals: **244 API tests and 40 web tests**. Coverage: API 96.6% statements / 86.3% branches, web 93.5% /
+83.4%. Every feature was built test-first: the history shows a failing `test(...) (red)` commit before each
+`feat(...) (green)` commit.
+
+**Live model testing.** This project was built and tested without a live API key. The real Anthropic path is covered by
+SDK-level tests with a mocked network (`anthropicLlmClient.test.ts`), and every action was run manually in no-key and
+`FORCE_LLM_FAILURE` modes. To see live model output, add your own `ANTHROPIC_API_KEY` to `.env` and restart
+`npm run dev`.
 
 The LLM is always a fake in tests: hand-rolled `LlmClient` fakes that stream, hang, stall mid-answer or fail. The real
 Anthropic client is tested through the actual SDK with a fake `fetch`, so no test needs a network or a key.
@@ -105,7 +116,7 @@ Try each action in the panel after any of these (restart `npm run dev` after edi
 | Stop the API while the page is open | An error with a **Retry** button (no frozen spinner: the client gives up after 15 s idle).                          |
 | Ask Help something off-topic        | "The policy doesn't cover this…", answered without calling the model.                                               |
 
-Every LLM call writes one JSON line to the API console, for example:
+Every LLM call writes one JSON line to the API console. An illustrative example (the token numbers are made up):
 `{"event":"llm_call","promptId":"summary","promptVersion":"1.0.0","model":"claude-haiku-5-5","inputTokens":512,"outputTokens":180,"latencyMs":1430,"outcome":"ok"}`.
 
 ## 4. Architecture
@@ -189,14 +200,24 @@ every prompt change, so a new prompt version has to beat the old one before it s
   soon as it arrives, so the list appears item by item while every item is still schema-checked.
 - **TypeScript 6, not 7.** `ts-jest` supports TypeScript `<7`, so the repo pins 6.0.3.
 - **Model settings.** Haiku 5.5 with thinking off and low effort: every task here is short and latency-sensitive.
-- **Deadline.** The email said 24 hours and the document said 5 days. <!-- TODO(Milan): state the deadline you worked to. -->
+- **Deadline.** The email said 24 hours and the document said 5 days. I worked to the stricter 24-hour deadline.
 
 ## 7. AI tool usage
 
-<!-- TODO(Milan): write this section yourself, truthfully. For example: "Built with Claude Code from a plan I wrote.
-I reviewed every change, and I designed / adjusted X and Y myself." -->
+<!-- TODO(Milan): check this draft is true for you, add what you designed or changed yourself, and remove this comment. -->
 
-_To be written by Milan._
+Built with **Claude Code** from a plan I wrote ([`PLAN.md`](PLAN.md)): scope, stack, architecture, the five actions and
+their fallbacks, the test list and the TDD commit rhythm. Claude Code wrote the code and tests phase by phase, and I
+reviewed each phase before allowing the next.
+
+Decisions I made along the way:
+
+- Added ESLint, Prettier and V8 coverage, which weren't in the original dependency list.
+- Kept contract and seed-data tests in the API package, so `packages/contracts` depends only on Zod.
+- Asked for configurable dev ports after port clashes on my machine, and for the panel to fit its content after
+  reviewing the UI in the browser.
+
+_[Add anything else you designed, changed or rejected yourself.]_
 
 ## 8. Prompt versioning
 
