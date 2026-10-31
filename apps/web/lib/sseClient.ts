@@ -138,6 +138,23 @@ export async function postStream(
   }
 }
 
+/** GETs JSON and validates it against `schema`. */
+export async function getJson<S extends z.ZodType>(
+  path: string,
+  schema: S,
+  options: Omit<RequestOptions, 'signal'>,
+): Promise<JsonOutcome<z.output<S>>> {
+  const { sessionId, fetchFn = fetch } = options;
+  try {
+    const response = await fetchFn(path, { headers: { accept: 'application/json', 'x-session-id': sessionId } });
+    if (!response.ok) return failure(kindForStatus(response.status));
+    const parsed = schema.safeParse(await response.json());
+    return parsed.success ? { ok: true, data: parsed.data } : failure('server');
+  } catch {
+    return failure('network');
+  }
+}
+
 /** POSTs JSON and validates the response body against `schema` before returning it. */
 export async function postJson<S extends z.ZodType>(
   path: string,

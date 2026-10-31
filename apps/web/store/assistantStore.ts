@@ -1,5 +1,7 @@
 import {
+  ApprovalsResponseSchema,
   GreetingResponseSchema,
+  type ApprovalItem,
   type ChatMessage,
   type FallbackReason,
   type StreamEvent,
@@ -7,7 +9,7 @@ import {
   type SummaryItemEvent,
 } from '@approvals/contracts';
 import { create } from 'zustand';
-import { postJson, postStream, type RequestFailure } from '@/lib/sseClient';
+import { getJson, postJson, postStream, type RequestFailure } from '@/lib/sseClient';
 
 export type Mode = 'talk' | 'help' | 'teach';
 export type View = 'home' | 'summary' | Mode;
@@ -36,8 +38,14 @@ export interface GreetingState {
   status: 'idle' | 'loading' | 'done' | 'error';
 }
 
+export interface ApprovalsState {
+  items: ApprovalItem[];
+  status: 'idle' | 'loading' | 'done' | 'error';
+}
+
 interface AssistantData {
   isOpen: boolean;
+  approvals: ApprovalsState;
   view: View;
   greeting: GreetingState;
   conversations: Record<Mode, UiMessage[]>;
@@ -51,6 +59,7 @@ interface AssistantData {
 interface AssistantActions {
   open(): void;
   close(): void;
+  loadApprovals(): Promise<void>;
   setView(view: View): void;
   loadGreeting(): Promise<void>;
   runSummary(): Promise<void>;
@@ -69,6 +78,7 @@ const GENERIC_GREETING = "Hi! I'm your Approvals assistant. Pick an option below
 
 const initialData = (): AssistantData => ({
   isOpen: true,
+  approvals: { items: [], status: 'idle' },
   view: 'home',
   greeting: { text: '', status: 'idle' },
   conversations: { talk: [], help: [], teach: [] },
@@ -212,6 +222,13 @@ export const useAssistantStore = create<AssistantState>()((set, get) => {
     setView: (view) => {
       inFlight?.abort();
       set({ view, status: 'idle', error: undefined, fallbackReason: undefined });
+    },
+
+    async loadApprovals() {
+      if (get().approvals.status === 'loading') return;
+      set((state) => ({ approvals: { ...state.approvals, status: 'loading' } }));
+      const result = await getJson('/api/approvals', ApprovalsResponseSchema, { sessionId });
+      set({ approvals: result.ok ? { items: result.data.items, status: 'done' } : { items: [], status: 'error' } });
     },
 
     async loadGreeting() {
