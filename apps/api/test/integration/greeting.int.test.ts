@@ -15,7 +15,7 @@ describe('POST /api/ai/greeting', () => {
       greeting: 'Good morning! 4 items await you.',
       source: 'ai',
     });
-    expect(usage).toMatchObject([{ promptId: 'greeting', promptVersion: '1.0.0', outcome: 'ok' }]);
+    expect(usage).toMatchObject([{ promptId: 'greeting', promptVersion: '1.1.0', outcome: 'ok' }]);
   });
 
   it('still answers 200 with the template when the model times out', async () => {

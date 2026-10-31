@@ -6,11 +6,14 @@ import {
   type GreetingResponse,
 } from '@approvals/contracts';
 import { buildGreetingTemplate } from '../domain/greetingTemplate';
+import { rankApprovals } from '../domain/urgency';
 import { toFallbackReason } from '../llm/errors';
 import type { LlmRunner } from '../llm/llmRunner';
 import type { Logger } from '../logging/logger';
 import { activePrompts, promptRef } from '../prompts';
 import { keepsNumbersFrom, parseModelJson } from './modelOutput';
+
+const normalise = (text: string) => text.trim().replace(/\s+/g, ' ').toLowerCase();
 
 // AI-optional: the template is already a complete greeting. The model only improves the tone,
 // and anything short of a valid, fact-preserving answer falls back to the template.
@@ -23,6 +26,7 @@ export function createGreetingService(deps: { runner: LlmRunner; approvals: read
         items: deps.approvals,
         ...(input.localTime ? { localTime: input.localTime } : {}),
       });
+      const mostUrgentTitle = rankApprovals(deps.approvals)[0]?.item.title;
       const fallback = (reason: FallbackReason): GreetingResponse => {
         deps.logger.log({ level: 'warn', event: 'greeting_fallback', reason });
         return { greeting: template, source: 'template' };
@@ -34,7 +38,14 @@ export function createGreetingService(deps: { runner: LlmRunner; approvals: read
           {
             system: prompt.system,
             messages: [
-              { role: 'user', content: prompt.buildUserMessage({ template, language: input.language ?? 'en' }) },
+              {
+                role: 'user',
+                content: prompt.buildUserMessage({
+                  template,
+                  language: input.language ?? 'en',
+                  ...(mostUrgentTitle ? { mostUrgentTitle } : {}),
+                }),
+              },
             ],
             maxTokens: 200,
           },
@@ -45,7 +56,15 @@ export function createGreetingService(deps: { runner: LlmRunner; approvals: read
       }
 
       const parsed = GreetingSchema.safeParse(parseModelJson(text));
-      if (!parsed.success || !keepsNumbersFrom(template, parsed.data.greeting)) return fallback('invalid_output');
+      // Numbers may come from the template or the item title the model was given; nothing else.
+      const allowedFacts = `${template} ${mostUrgentTitle ?? ''}`;
+      if (!parsed.success || !keepsNumbersFrom(allowedFacts, parsed.data.greeting)) return fallback('invalid_output');
+
+      // A copy of the template isn't an AI greeting, so don't label it as one.
+      if (normalise(parsed.data.greeting) === normalise(template)) {
+        deps.logger.log({ level: 'info', event: 'greeting_unchanged' });
+        return { greeting: template, source: 'template' };
+      }
       return { greeting: parsed.data.greeting.trim(), source: 'ai' };
     },
   };
