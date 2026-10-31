@@ -100,6 +100,13 @@ const localTime = () => {
   return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 };
 
+/** The operator's language from the browser (e.g. "hi-IN"), so the summary and greeting come back in it. */
+export function operatorLanguage(): string {
+  const lang = typeof navigator === 'undefined' ? '' : navigator.language;
+  // Same bounds as the API's LanguageSchema (2–10 characters); anything odd falls back to English.
+  return /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,4})?$/.test(lang ?? '') ? lang : 'en';
+}
+
 /** What the user actually saw for a message: model text plus any fallback answer. */
 const visibleText = (m: UiMessage) => [m.content, m.fallback?.content].filter(Boolean).join('\n\n');
 
@@ -233,9 +240,12 @@ export const useAssistantStore = create<AssistantState>()((set, get) => {
 
     async loadGreeting() {
       set((state) => ({ greeting: { ...state.greeting, status: 'loading' } }));
-      const result = await postJson('/api/ai/greeting', { localTime: localTime() }, GreetingResponseSchema, {
-        sessionId,
-      });
+      const result = await postJson(
+        '/api/ai/greeting',
+        { localTime: localTime(), language: operatorLanguage() },
+        GreetingResponseSchema,
+        { sessionId },
+      );
       set({
         greeting: result.ok
           ? { text: result.data.greeting, source: result.data.source, status: 'done' }
@@ -255,7 +265,7 @@ export const useAssistantStore = create<AssistantState>()((set, get) => {
 
       const outcome = await postStream(
         '/api/ai/summary',
-        {},
+        { language: operatorLanguage() },
         {
           sessionId,
           signal: controller.signal,

@@ -3,6 +3,7 @@
 import type { Urgency } from '@approvals/contracts';
 import { RefreshCw } from 'lucide-react';
 import { useAssistantStore } from '@/store/assistantStore';
+import { ReadAloudButton } from './ReadAloudButton';
 import { ErrorNotice, FallbackNotice } from './StatusParts';
 
 const URGENCY_STYLES: Record<Urgency, string> = {
@@ -34,6 +35,13 @@ export function SummaryView() {
   const busy = status === 'loading' || status === 'streaming';
   const nothingYet = !summary.headline && summary.items.length === 0;
   const someFromAi = summary.headline?.source === 'ai' || summary.items.some((item) => item.source === 'ai');
+  // What "Read aloud" says: the headline, then each item in rank order.
+  const spokenSummary = [
+    summary.headline?.text,
+    ...summary.items.map((item) => `${item.rank}. ${titleOf(item.id)}, ${item.urgency} urgency. ${item.reason}`),
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   return (
     <div aria-live="polite" className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-3">
@@ -77,14 +85,17 @@ export function SummaryView() {
       )}
 
       {!busy && !nothingYet && (
-        <button
-          type="button"
-          onClick={() => void runSummary()}
-          className="inline-flex items-center gap-1.5 self-start text-xs font-medium text-slate-600 hover:text-slate-900"
-        >
-          <RefreshCw aria-hidden="true" className="size-3.5" />
-          Refresh summary
-        </button>
+        <div className="flex items-center gap-4">
+          <ReadAloudButton text={spokenSummary} />
+          <button
+            type="button"
+            onClick={() => void runSummary()}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900"
+          >
+            <RefreshCw aria-hidden="true" className="size-3.5" />
+            Refresh summary
+          </button>
+        </div>
       )}
     </div>
   );
