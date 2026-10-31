@@ -36,18 +36,37 @@ npm run dev             # starts the API on :4000 and the web app on :3000
 Open http://localhost:3000. The web app proxies `/api/*` to the API, so the browser never sees the key or needs CORS.
 If port 3000 is taken, run `WEB_PORT=3100 npm run dev` (or set `WEB_PORT` in `.env`).
 
-| Variable             | Default            | Purpose                                                                        |
-| -------------------- | ------------------ | ------------------------------------------------------------------------------ |
-| `ANTHROPIC_API_KEY`  | _(empty)_          | Server-side only. Empty means every action uses its fallback.                  |
-| `ANTHROPIC_MODEL`    | `claude-haiku-5-5` | Fast and cheap for short tasks; overridable.                                   |
-| `LLM_TIMEOUT_MS`     | `8000`             | Total timeout for the greeting; first-token and idle timeout for streams.      |
-| `FORCE_LLM_FAILURE`  | `false`            | Demo switch: forces the fallback path even when a key is set.                  |
-| `RATE_LIMIT_PER_MIN` | `20`               | Requests per minute per session on `/api/ai/*` (each IP is capped at 5× this). |
-| `API_PORT`           | `4000`             | Express port. `npm run dev` points the web proxy at it automatically.          |
-| `WEB_PORT`           | `3000`             | Next.js port for `npm run dev`.                                                |
+| Variable             | Default                  | Purpose                                                                        |
+| -------------------- | ------------------------ | ------------------------------------------------------------------------------ |
+| `LLM_PROVIDER`       | `auto`                   | `auto` (Claude if a key is set), `anthropic`, or `ollama` (free local model).  |
+| `ANTHROPIC_API_KEY`  | _(empty)_                | Server-side only. Empty means every action uses its fallback.                  |
+| `ANTHROPIC_MODEL`    | `claude-haiku-5-5`       | Fast and cheap for short tasks; overridable.                                   |
+| `OLLAMA_BASE_URL`    | `http://localhost:11434` | Where Ollama listens, when `LLM_PROVIDER=ollama`.                              |
+| `OLLAMA_MODEL`       | `qwen2.5:3b`             | Local model to use. Pull it first with `ollama pull`.                          |
+| `LLM_TIMEOUT_MS`     | `8000`                   | Total timeout for the greeting; first-token and idle timeout for streams.      |
+| `FORCE_LLM_FAILURE`  | `false`                  | Demo switch: forces the fallback path even when a key is set.                  |
+| `RATE_LIMIT_PER_MIN` | `20`                     | Requests per minute per session on `/api/ai/*` (each IP is capped at 5× this). |
+| `API_PORT`           | `4000`                   | Express port. `npm run dev` points the web proxy at it automatically.          |
+| `WEB_PORT`           | `3000`                   | Next.js port for `npm run dev`.                                                |
 
 The server checks its environment and seed data at startup and refuses to start with a readable error if either is
 invalid (e.g. `LLM_TIMEOUT_MS=abc`, or an unknown `type` in `approvals.json`).
+
+### Free alternative: a local model with Ollama
+
+Claude is the intended model. To see real AI answers without an API key, run an open model locally with
+[Ollama](https://ollama.com):
+
+```bash
+ollama pull qwen2.5:3b     # about 2 GB, once
+```
+
+Then in `.env` set `LLM_PROVIDER=ollama` and `LLM_TIMEOUT_MS=20000` (a local model is slower; keep it under the
+Next.js proxy's 30 s limit so the API always answers first), and restart `npm run dev`. Ollama runs best on a GPU:
+close games or other GPU-heavy apps first, or the model may barely run. `OllamaLlmClient` talks to Ollama's HTTP API with the built-in `fetch`, so it adds no
+dependency, and it sits behind the same `LlmClient` interface: prompts, Zod validation, timeouts and fallbacks are
+unchanged. A small local model breaks the summary's NDJSON format more often than Claude. When it does, those lines
+are dropped and the items show as "Standard ranking", which is the validation doing its job.
 
 ## 2. Testing
 
