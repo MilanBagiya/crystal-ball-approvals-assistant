@@ -28,11 +28,12 @@ export function StreamingCaret() {
 }
 
 /** Shown whenever the server sent a non-AI answer. Deliberately low-key: the answer below it is still useful. */
-export function FallbackNotice() {
+export function FallbackNotice({ partial = false }: { partial?: boolean }) {
   return (
     <p className="mb-1 flex items-center gap-1.5 text-xs font-medium text-amber-700">
       <Info aria-hidden="true" className="size-3.5" />
-      AI unavailable, showing a standard answer
+      {/* Partial: the AI answered, but some parts were replaced by standard ones. */}
+      {partial ? 'Some parts are standard answers' : 'AI unavailable, showing a standard answer'}
     </p>
   );
 }

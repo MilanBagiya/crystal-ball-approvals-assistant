@@ -33,6 +33,7 @@ export function SummaryView() {
   const titleOf = (id: string) => approvals.find((a) => a.id === id)?.title ?? id;
   const busy = status === 'loading' || status === 'streaming';
   const nothingYet = !summary.headline && summary.items.length === 0;
+  const someFromAi = summary.headline?.source === 'ai' || summary.items.some((item) => item.source === 'ai');
 
   return (
     <div aria-live="polite" className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 py-3">
@@ -41,7 +42,7 @@ export function SummaryView() {
 
       {summary.fallback && (
         <div>
-          <FallbackNotice />
+          <FallbackNotice partial={someFromAi} />
           {summary.items.length === 0 && <p className="text-sm whitespace-pre-wrap">{summary.fallback.content}</p>}
         </div>
       )}
