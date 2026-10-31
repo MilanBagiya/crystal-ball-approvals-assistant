@@ -11,6 +11,7 @@ import type { Logger } from './logging/logger';
 import { aiRoutes, type AiServices } from './routes/ai';
 import { systemRoutes } from './routes/system';
 import { createGreetingService } from './services/greetingService';
+import { createSummaryService } from './services/summaryService';
 
 export interface AppDeps {
   llm: LlmClient;
@@ -33,10 +34,11 @@ export function createApp(deps: AppDeps): Express {
   const runner = createLlmRunner({ llm: deps.llm, timeoutMs: deps.config.llmTimeoutMs, logUsage: deps.logUsage });
   const services: AiServices = {
     greeting: createGreetingService({ runner, approvals: deps.approvals, logger: deps.logger }),
+    summary: createSummaryService({ runner, approvals: deps.approvals, logger: deps.logger }),
   };
 
   app.use('/api', systemRoutes(deps));
-  app.use('/api/ai', aiRoutes(services));
+  app.use('/api/ai', aiRoutes(services, deps.logger));
 
   app.use(notFoundHandler);
   app.use(errorHandler(deps.logger));
