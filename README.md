@@ -16,7 +16,12 @@ breaks the UI: the user always gets a usable answer, marked "AI unavailable, sho
 
 ![The Approvals & Review page with the assistant panel open on its home view](docs/screenshots/panel-desktop.png)
 
-On narrow screens the panel docks full-width at the bottom ([mobile screenshot](docs/screenshots/panel-mobile.png)).
+The page has a searchable queue, a detail pane for the selected item, and a status bar showing whether the AI is
+connected. More views: [summary with fallback items](docs/screenshots/panel-summary.png) ·
+[mobile, where the panel docks full-width at the bottom](docs/screenshots/panel-mobile.png).
+
+The layout follows the reference dashboard's structure, but uses an original name and Lucide icons instead of
+OomniEye's logo and illustrations.
 
 ## 1. Setup
 
@@ -56,8 +61,8 @@ npm run lint           # ESLint (no `any` allowed)
 npm run format:check   # Prettier
 ```
 
-Current totals: **244 API tests and 40 web tests**. Coverage: API 96.6% statements / 86.3% branches, web 93.5% /
-83.4%. Every feature was built test-first: the history shows a failing `test(...) (red)` commit before each
+Current totals: **244 API tests and 45 web tests**. Coverage: API 96.6% statements / 86.3% branches, web 93.8% /
+83.5%. Every feature was built test-first: the history shows a failing `test(...) (red)` commit before each
 `feat(...) (green)` commit.
 
 **Live model testing.** This project was built and tested without a live API key. The real Anthropic path is covered by
