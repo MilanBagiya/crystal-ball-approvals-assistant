@@ -1,0 +1,20 @@
+{
+  "name": "@approvals/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Zod schemas and inferred types shared by the web app and the API.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}
