@@ -41,6 +41,7 @@ export function hangingLlm(): FakeLlm {
   return {
     model: 'fake-model',
     requests,
+    // eslint-disable-next-line require-yield -- never yields, by design
     async *streamText(args) {
       requests.push(args);
       await new Promise<never>(() => undefined);
