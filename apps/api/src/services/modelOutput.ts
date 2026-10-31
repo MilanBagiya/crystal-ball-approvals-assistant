@@ -13,8 +13,12 @@ export function parseModelJson(text: string): unknown {
   }
 }
 
-/** True if every number in `text` also appears in `source`, so the model can reword but not change the facts. */
+/**
+ * True if every number in `text` also appears in `source`, so the model can reword but not change the facts.
+ * Digits from other scripts (e.g. Devanagari ५) can't be compared this way, so any of them fails the check.
+ */
 export function keepsNumbersFrom(source: string, text: string): boolean {
-  const allowed = new Set(source.match(/\d+/g) ?? []);
-  return (text.match(/\d+/g) ?? []).every((n) => allowed.has(n));
+  if (/[^\P{Nd}0-9]/u.test(text)) return false;
+  const allowed = new Set(source.match(/[0-9]+/g) ?? []);
+  return (text.match(/[0-9]+/g) ?? []).every((n) => allowed.has(n));
 }
