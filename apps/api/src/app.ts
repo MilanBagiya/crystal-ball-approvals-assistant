@@ -1,9 +1,35 @@
+import type { ApprovalItem } from '@approvals/contracts';
+import cors from 'cors';
 import express, { type Express } from 'express';
+import type { AppConfig } from './config/config';
+import type { PolicyChunk } from './domain/policyChunks';
+import { errorHandler, notFoundHandler } from './http/errorHandler';
+import type { LlmClient } from './llm/LlmClient';
+import type { UsageLogger } from './llm/usageLog';
+import type { Logger } from './logging/logger';
+import { systemRoutes } from './routes/system';
 
-// App factory: dependencies (LLM client, config) get injected here in later phases,
-// so Supertest can build an app with fakes and no network.
-export function createApp(): Express {
+export interface AppDeps {
+  llm: LlmClient;
+  approvals: readonly ApprovalItem[];
+  policyChunks: readonly PolicyChunk[];
+  config: Pick<AppConfig, 'llmTimeoutMs' | 'rateLimitPerMin'>;
+  logUsage: UsageLogger;
+  logger: Logger;
+}
+
+// App factory: everything external is injected, so Supertest builds an app with fakes and no network.
+export function createApp(deps: AppDeps): Express {
   const app = express();
+  app.disable('x-powered-by');
+
+  // The browser goes through the Next.js proxy (same origin); this only allows calling the API directly in dev.
+  app.use(cors({ origin: 'http://localhost:3000' }));
   app.use(express.json({ limit: '32kb' }));
+
+  app.use('/api', systemRoutes(deps));
+
+  app.use(notFoundHandler);
+  app.use(errorHandler(deps.logger));
   return app;
 }
