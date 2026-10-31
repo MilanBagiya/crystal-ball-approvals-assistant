@@ -123,6 +123,21 @@ describe('ChatView', () => {
     expect(screen.queryByRole('group', { name: 'Suggested questions' })).not.toBeInTheDocument();
   });
 
+  it('shows **bold** from the model as bold text, without asterisks and without rendering HTML', async () => {
+    const stream = controllableStream();
+    await openTalk(() => stream.response);
+
+    stream.push({ type: 'token', text: '1. **Check the deadline**: safety items <b>first</b>.' });
+    stream.push({ type: 'done' });
+    stream.close();
+
+    const bold = await screen.findByText('Check the deadline');
+    expect(bold.tagName).toBe('STRONG');
+    expect(screen.queryByText(/\*\*/)).not.toBeInTheDocument();
+    // Model text is never treated as HTML.
+    expect(screen.getByText(/safety items <b>first<\/b>\./)).toBeInTheDocument();
+  });
+
   it('disables Send while a reply is in progress', async () => {
     const { user } = await openTalk(() => controllableStream().response);
 
