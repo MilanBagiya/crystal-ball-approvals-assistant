@@ -67,14 +67,15 @@ export function AssistantPanel() {
   if (!isOpen) return <FloatingButton />;
 
   const count = approvals.status === 'done' ? `${approvals.items.length} items` : 'Loading items…';
+  // Home fits its content; chat and summary get a fixed height so the conversation has room to scroll.
+  const width = expanded ? 'sm:w-[560px]' : 'sm:w-[400px]';
+  const height = view === 'home' ? '' : expanded ? 'h-[85dvh]' : 'h-[600px]';
 
   return (
     <section
       role="dialog"
       aria-label="Approvals assistant"
-      className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl ring-1 ring-slate-200 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:rounded-2xl ${
-        expanded ? 'h-[85dvh] sm:w-[560px]' : 'h-[600px] sm:w-[400px]'
-      }`}
+      className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl ring-1 ring-slate-200 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:rounded-2xl ${width} ${height}`}
     >
       <header className="flex items-center gap-3 bg-[#0f1f3d] px-4 py-3 text-white">
         <span className="grid size-9 place-items-center rounded-full bg-white/15">
