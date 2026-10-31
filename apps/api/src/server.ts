@@ -1,18 +1,23 @@
 import dotenv from 'dotenv';
 import { createApp } from './app';
+import { loadConfig } from './config/config';
 import { APPROVALS_FILE, ENV_FILE } from './config/paths';
 import { loadApprovals } from './data/loadApprovals';
+import { createLlmClient } from './llm/createLlmClient';
 
 // The .env file lives at the repo root, shared by both apps.
 dotenv.config({ path: ENV_FILE, quiet: true });
 
 function start(): void {
-  // Fail fast: an invalid seed file stops the server with a readable error, not a half-working API.
+  // Fail fast: bad env or seed data stops the server with a readable error, not a half-working API.
+  const config = loadConfig(process.env);
   const approvals = loadApprovals(APPROVALS_FILE);
-  const port = Number(process.env.API_PORT ?? 4000);
+  const llm = createLlmClient(config);
 
-  createApp().listen(port, () => {
-    console.log(`API listening on http://localhost:${port} (${approvals.length} approvals loaded)`);
+  createApp().listen(config.apiPort, () => {
+    console.log(
+      `API listening on http://localhost:${config.apiPort} (${approvals.length} approvals loaded, LLM: ${llm.model})`,
+    );
   });
 }
 
