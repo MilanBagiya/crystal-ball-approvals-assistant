@@ -5,9 +5,9 @@
   "type": "module",
   "description": "Next.js UI for the Approvals assistant panel.",
   "scripts": {
-    "dev": "next dev --port 3000",
+    "dev": "next dev",
     "build": "next build",
-    "start": "next start --port 3000",
+    "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
