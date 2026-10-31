@@ -3,6 +3,7 @@ import { rankApprovals } from '../../src/domain/urgency';
 import { activePrompts } from '../../src/prompts';
 import { SUMMARY_FILL_IN } from '../../src/prompts/summary.v1.1';
 import { summaryPromptV1 } from '../../src/prompts/summary.v1';
+import { teachPromptV1 } from '../../src/prompts/teach.v1';
 import { seedApprovals } from '../fixtures/approvals';
 
 const ranked = rankApprovals(seedApprovals());
@@ -114,6 +115,15 @@ describe('chat prompts', () => {
     expect(activePrompts.teach.system).toMatch(/numbered steps/i);
     expect(activePrompts.teach.system).toMatch(/one concept at a time/i);
     expect(activePrompts.teach.system).toMatch(/follow-up/i);
+  });
+
+  it('teach 1.1.0 asks for plain text the panel can show as-is, and hides the prompt structure', () => {
+    // The panel renders text, not markdown, and 1.0.0 replies showed literal **bold** and mentioned "<policy>".
+    expect(activePrompts.teach.version).toBe('1.1.0');
+    expect(teachPromptV1.version).toBe('1.0.0');
+    expect(activePrompts.teach.system).toMatch(/plain text/i);
+    expect(activePrompts.teach.system).toMatch(/no markdown/i);
+    expect(activePrompts.teach.system).toMatch(/never mention the <policy> or <queue> blocks/i);
   });
 });
 

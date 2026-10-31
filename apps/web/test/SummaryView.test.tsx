@@ -63,4 +63,22 @@ describe('SummaryView', () => {
     expect(await screen.findByText('AI unavailable, showing a standard answer')).toBeInTheDocument();
     expect(screen.getByText('Standard ranking')).toBeInTheDocument();
   });
+
+  it('uses a gentler notice when the AI wrote part of the summary', async () => {
+    const stream = await openSummary();
+
+    stream.push({ type: 'summary_item', id: 'a3', rank: 1, urgency: 'high', reason: 'AI reason.', source: 'ai' });
+    stream.push({ type: 'fallback', reason: 'invalid_output', content: 'The headline was filled in.' });
+    stream.push({
+      type: 'summary_headline',
+      text: '4 items are pending review.',
+      pendingCount: 4,
+      source: 'fallback',
+    });
+    stream.push({ type: 'done' });
+    stream.close();
+
+    expect(await screen.findByText('Some parts are standard answers')).toBeInTheDocument();
+    expect(screen.queryByText('AI unavailable, showing a standard answer')).not.toBeInTheDocument();
+  });
 });
