@@ -6,6 +6,7 @@ import { buildTestApp } from '../fakes/testApp';
 
 const cases: [string, string, object, RegExp][] = [
   ['greeting with a non-HH:MM localTime', '/api/ai/greeting', { localTime: '2pm' }, /localTime/],
+  ['summary with a non-string language', '/api/ai/summary', { language: 42 }, /language/],
 ];
 
 describe('request validation', () => {
