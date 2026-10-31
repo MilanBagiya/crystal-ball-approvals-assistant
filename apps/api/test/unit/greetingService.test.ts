@@ -69,6 +69,8 @@ describe('greetingService', () => {
     ['an empty greeting', '{"greeting":""}'],
     // The model must not change the facts: 5 is not a number the template contains.
     ['a greeting that changes a number', '{"greeting":"Good afternoon! You have 5 items waiting."}'],
+    // Digits from other scripts (here Devanagari ५ = 5) would slip past a 0-9 check, so they are refused outright.
+    ['a greeting with non-ASCII digits', '{"greeting":"नमस्ते! आपके पास ५ आइटम हैं।"}'],
   ])('falls back to the template for %s', async (_label, output) => {
     const { greet, logs } = service(fakeLlm([output]));
 

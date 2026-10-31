@@ -5,6 +5,7 @@ import { SUMMARY_FILL_IN } from '../../src/prompts/summary.v1.1';
 import { summaryPromptV1 } from '../../src/prompts/summary.v1';
 import { teachPromptV1 } from '../../src/prompts/teach.v1';
 import { greetingPromptV1 } from '../../src/prompts/greeting.v1';
+import { greetingPromptV1_1 } from '../../src/prompts/greeting.v1.1';
 import { helpPromptV1 } from '../../src/prompts/help.v1';
 import { seedApprovals } from '../fixtures/approvals';
 
@@ -157,10 +158,20 @@ describe('greeting prompt', () => {
       mostUrgentTitle: 'Safety Equipment & Sensor Specs',
     });
 
-    expect(activePrompts.greeting.version).toBe('1.1.0');
+    expect(greetingPromptV1_1.version).toBe('1.1.0');
     expect(greetingPromptV1.version).toBe('1.0.0');
     expect(activePrompts.greeting.system).toMatch(/in your own words/i);
     expect(activePrompts.greeting.system).toMatch(/do not copy the template/i);
     expect(message).toContain('Most urgent item: Safety Equipment & Sensor Specs');
+  });
+
+  it('1.2.0 writes in the requested language, with numbers as digits 0-9 so they can be fact-checked', () => {
+    // 1.1.0 passed "Language: hi-IN" but never told the model to use it, so greetings stayed in English.
+    const message = activePrompts.greeting.buildUserMessage({ template: 'Hello! 4 items.', language: 'hi-IN' });
+
+    expect(activePrompts.greeting.version).toBe('1.2.0');
+    expect(activePrompts.greeting.system).toMatch(/write in the requested language/i);
+    expect(activePrompts.greeting.system).toMatch(/digits 0-9/i);
+    expect(message).toContain('Language: hi-IN');
   });
 });
