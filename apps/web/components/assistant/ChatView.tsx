@@ -3,6 +3,7 @@
 import { Bot, SendHorizontal, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAssistantStore, type Mode, type UiMessage } from '@/store/assistantStore';
+import { renderInlineBold } from './formatText';
 import { ErrorNotice, FallbackNotice, StreamingCaret, TypingDots } from './StatusParts';
 
 const INTROS: Record<Mode, string> = {
@@ -47,7 +48,7 @@ function MessageBubble({ message, streaming }: { message: UiMessage; streaming: 
       <div className="min-w-0 rounded-2xl rounded-tl-md bg-slate-100 px-3.5 py-2 text-sm leading-relaxed text-slate-800">
         {message.content && (
           <p className="whitespace-pre-wrap">
-            {message.content}
+            {renderInlineBold(message.content)}
             {streaming && <StreamingCaret />}
           </p>
         )}
