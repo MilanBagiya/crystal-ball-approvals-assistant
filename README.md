@@ -99,6 +99,10 @@ All five actions were also run live against a small local model (`qwen2.5:3b` vi
   makes the model quote the policy sentence before answering; it then answered correctly in 3 of 3 runs.
 - **Greeting 1.0.0** came back as an exact copy of the template. **Greeting 1.1.0** asks for new wording and offers the
   most urgent item to mention. A greeting that still matches the template is now labelled `source: "template"`.
+- **Operator's language:** the panel sends the browser language (e.g. `hi-IN`) with summary and greeting requests.
+  **Greeting 1.2.0** writes in it (French worked: "Bonjour! Vous avez 4 items à examiner…"), and numbers must use the
+  digits 0-9 so the fact check works in any script. The 3B model still answered Hindi requests in English, and wrote
+  French summary reasons in English; a larger model such as Claude follows the language instruction reliably.
 - **Teach 1.0.0** used markdown bold and mentioned "the `<policy>` section". **Teach 1.1.0** asks for plain text and
   keeps the prompt structure hidden, and the panel now renders any `**bold**` safely as bold text.
 
@@ -259,8 +263,8 @@ _[Add anything else you designed, changed or rejected yourself.]_
 ## 8. Prompt versioning
 
 Prompts live only in [`apps/api/src/prompts/`](apps/api/src/prompts/), one file per prompt and version
-(`greeting.v1.ts`, `summary.v1.ts`, `help.v1.ts`, `talk.v1.ts`, `teach.v1.ts`, plus `*.v1.1.ts` for greeting, summary,
-help and teach, which are the active versions). Each exports an object with an `id`,
+(`greeting.v1.ts`, `summary.v1.ts`, `help.v1.ts`, `talk.v1.ts`, `teach.v1.ts`, plus newer `*.v1.1.ts` and
+`greeting.v1.2.ts`). The active versions are greeting 1.2.0, summary, help and teach 1.1.0, and talk 1.0.0. Each exports an object with an `id`,
 a semver `version`, the system prompt and a builder for the user message. [`prompts/index.ts`](apps/api/src/prompts/index.ts)
 is the registry of active versions.
 
