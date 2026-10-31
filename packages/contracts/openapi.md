@@ -8,16 +8,19 @@ Base URL: `http://localhost:4000` (the web app proxies `/api/*`, so the browser 
 ## Conventions
 
 - **Request bodies** are JSON, validated with the named Zod schema. A failure returns `400`.
-- **Session header:** clients send `x-session-id: <uuid>` on every request. It keys the rate limiter (IP is the fallback).
+- **Session header:** clients send `x-session-id: <uuid>` on every request. It keys the rate limiter. A missing or
+  malformed id falls back to the IP, and each IP is also capped at 5× the per-session limit, so rotating ids doesn't
+  bypass the limit.
 - **Errors** always use `ApiErrorSchema`: `{ "error": { "code": string, "message": string } }`. A stack trace or an HTML
   error page is never returned.
 
-| Status | `error.code`      | When                                                                                       |
-| ------ | ----------------- | ------------------------------------------------------------------------------------------ |
-| 400    | `invalid_request` | Body fails its Zod schema. `message` lists the failing fields.                             |
-| 404    | `not_found`       | Unknown route.                                                                             |
-| 429    | `rate_limited`    | More than `RATE_LIMIT_PER_MIN` requests to `/api/ai/*` in a minute for this session.       |
-| 500    | `internal_error`  | Unexpected error **before** a stream starts. Generic message, details only in server logs. |
+| Status | `error.code`        | When                                                                                       |
+| ------ | ------------------- | ------------------------------------------------------------------------------------------ |
+| 400    | `invalid_request`   | Body is not valid JSON or fails its Zod schema. `message` lists the failing fields.        |
+| 413    | `payload_too_large` | Body is over 32 KB.                                                                        |
+| 404    | `not_found`         | Unknown route.                                                                             |
+| 429    | `rate_limited`      | More than `RATE_LIMIT_PER_MIN` requests to `/api/ai/*` in a minute for this session.       |
+| 500    | `internal_error`    | Unexpected error **before** a stream starts. Generic message, details only in server logs. |
 
 - **AI unavailability is not an error.** No API key, a timeout, a model error or invalid model output all still return
   `200` with a deterministic fallback answer (see each endpoint).
