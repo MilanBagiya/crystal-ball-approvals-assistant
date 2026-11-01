@@ -5,7 +5,7 @@ import { helpPromptV1_1 } from './help.v1.1';
 import { reviewPromptV1 } from './review.v1';
 import { searchPromptV1_1 } from './search.v1.1';
 import { summaryPromptV1_1 } from './summary.v1.1';
-import { talkPromptV1 } from './talk.v1';
+import { talkPromptV1_1 } from './talk.v1.1';
 import { teachPromptV1_1 } from './teach.v1.1';
 
 // The active version of each prompt. To change a prompt, add e.g. summary.v2.ts with a bumped
@@ -17,7 +17,8 @@ export const activePrompts = {
   summary: summaryPromptV1_1,
   // 1.1.0 replaced 1.0.0 (still in help.v1.ts): quote the policy sentence first, then answer.
   help: helpPromptV1_1,
-  talk: talkPromptV1,
+  // 1.1.0 replaced 1.0.0 (still in talk.v1.ts): decided items get their own block, and ids are left out.
+  talk: talkPromptV1_1,
   // 1.1.0 replaced 1.0.0 (still in teach.v1.ts): plain text only, prompt blocks never mentioned.
   teach: teachPromptV1_1,
   review: reviewPromptV1,

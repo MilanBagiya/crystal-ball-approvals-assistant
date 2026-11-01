@@ -1,4 +1,6 @@
+import type { ApprovalItem } from '@approvals/contracts';
 import type { PolicyChunk } from '../domain/policyChunks';
+import { decisionText } from '../domain/summaryFallback';
 import type { RankedApproval } from '../domain/urgency';
 
 export const GROUNDING_RULES = `Rules:
@@ -20,6 +22,28 @@ export function formatQueue(ranked: readonly RankedApproval[]): string {
       ({ item, rank, urgency }) =>
         `- rank ${rank} (${urgency}) [${item.id}] "${item.title}": ${item.type}, submitted by ${item.submittedBy} ` +
         `on ${item.submittedAt}, in ${item.path}, status ${item.status}`,
+    )
+    .join('\n');
+}
+
+/** Pending items in priority order, by title only: internal ids are left out so the model can't repeat them. */
+export function formatPendingQueue(ranked: readonly RankedApproval[]): string {
+  if (ranked.length === 0) return 'No items are waiting for review.';
+  return ranked
+    .map(
+      ({ item, rank, urgency }) =>
+        `- rank ${rank} (${urgency}) "${item.title}": ${item.type}, submitted by ${item.submittedBy} ` +
+        `on ${item.submittedAt}, in ${item.path}`,
+    )
+    .join('\n');
+}
+
+export function formatDecided(decided: readonly ApprovalItem[]): string {
+  if (decided.length === 0) return 'No items have been decided yet.';
+  return decided
+    .map(
+      (item) =>
+        `- "${item.title}": ${decisionText(item)}` + (item.reviewComment ? `, comment: "${item.reviewComment}"` : ''),
     )
     .join('\n');
 }

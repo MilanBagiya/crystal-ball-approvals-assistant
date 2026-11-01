@@ -1,9 +1,12 @@
+import type { ApprovalItem } from '@approvals/contracts';
 import type { PolicyChunk } from '../domain/policyChunks';
 import type { RankedApproval } from '../domain/urgency';
 import { fence, formatPolicy, formatQueue, GROUNDING_RULES } from './shared';
 
 export interface ChatPromptInput {
   ranked: readonly RankedApproval[];
+  /** Items already approved, rejected or sent back. Talk 1.1.0 and later show them in their own block. */
+  decided?: readonly ApprovalItem[];
   policyChunks?: readonly PolicyChunk[];
 }
 

@@ -1,4 +1,4 @@
-import type { SummaryHeadline } from '@approvals/contracts';
+import type { ApprovalItem, SummaryHeadline } from '@approvals/contracts';
 import type { RankedApproval } from './urgency';
 
 // Deterministic summary parts: used whenever the model's version is missing or invalid.
@@ -28,4 +28,20 @@ export function fallbackReason({ tier, keyword }: RankedApproval): string {
 /** The queue as numbered plain text, e.g. "1. Safety Equipment & Sensor Specs (high): ...". */
 export function formatRankedQueue(ranked: readonly RankedApproval[]): string {
   return ranked.map((r) => `${r.rank}. ${r.item.title} (${r.urgency}): ${fallbackReason(r)}`).join('\n');
+}
+
+const DECISION_LABELS: Record<Exclude<ApprovalItem['status'], 'pending_review'>, string> = {
+  approved: 'approved',
+  changes_requested: 'changes requested',
+  rejected: 'rejected',
+};
+
+/** "approved on 2026-11-01" for a decided item, so the model and the fallbacks describe decisions the same way. */
+export function decisionText(item: ApprovalItem): string {
+  const label = item.status === 'pending_review' ? 'pending review' : DECISION_LABELS[item.status];
+  return item.reviewedAt ? `${label} on ${item.reviewedAt.slice(0, 10)}` : label;
+}
+
+export function formatDecidedList(decided: readonly ApprovalItem[]): string {
+  return decided.map((item) => `- ${item.title}: ${decisionText(item)}`).join('\n');
 }
