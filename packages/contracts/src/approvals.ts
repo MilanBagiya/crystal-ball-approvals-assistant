@@ -12,6 +12,9 @@ export const ApprovalItemSchema = z.strictObject({
   path: z.string().min(1),
   status: ApprovalStatusSchema,
   submittedAt: z.iso.date(),
+  // Set when a reviewer decides; absent while the item is pending.
+  reviewedAt: z.iso.datetime().optional(),
+  reviewComment: z.string().max(1000).optional(),
 });
 
 // Ranking and summary validation key on id, so ids must be unique.

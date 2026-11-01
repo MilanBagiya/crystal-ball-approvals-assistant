@@ -11,6 +11,7 @@ import { createLlmRunner } from './llm/llmRunner';
 import type { UsageLogger } from './llm/usageLog';
 import type { Logger } from './logging/logger';
 import { aiRoutes, type AiServices } from './routes/ai';
+import { approvalRoutes } from './routes/approvals';
 import { systemRoutes } from './routes/system';
 import { createChatService } from './services/chatService';
 import { createGreetingService } from './services/greetingService';
@@ -47,7 +48,8 @@ export function createApp(deps: AppDeps): Express {
     chat: createChatService({ runner, listApprovals, policyChunks: deps.policyChunks }),
   };
 
-  app.use('/api', systemRoutes({ llm: deps.llm, listApprovals }));
+  app.use('/api', systemRoutes({ llm: deps.llm }));
+  app.use('/api/approvals', approvalRoutes(queue));
   // Rate limiting runs first, so over-limit requests never reach validation or the LLM.
   app.use('/api/ai', ...aiRateLimiters(deps.config.rateLimitPerMin), aiRoutes(services, deps.logger));
 
