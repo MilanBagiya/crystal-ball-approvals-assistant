@@ -20,6 +20,18 @@ function renderHome(extra: Record<string, () => Response | Error> = {}) {
   return { fetchFn, user: userEvent.setup() };
 }
 
+describe('branding', () => {
+  it('names the project in the top bar and the footer', async () => {
+    renderHome();
+    await screen.findByRole('table');
+
+    expect(screen.getByText('Crystal Ball')).toBeInTheDocument();
+    expect(screen.getByText('Command Centre')).toBeInTheDocument();
+    expect(screen.getByText(/Approvals AI Assistant/)).toBeInTheDocument();
+    expect(screen.queryByText(/Digital Twin/)).not.toBeInTheDocument();
+  });
+});
+
 describe('navigation', () => {
   it('links to the Dashboard from the sidebar and from "Back to Dashboard"', async () => {
     renderHome();
