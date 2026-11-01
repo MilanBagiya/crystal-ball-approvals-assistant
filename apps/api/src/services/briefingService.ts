@@ -43,6 +43,9 @@ export function createBriefingService(deps: { runner: LlmRunner }) {
       if (!parsed.success || !keepsNumbersFrom(`${JSON.stringify(facts)} ${template}`, parsed.data.briefing)) {
         return fallback;
       }
+      // Code decides where to start: the briefing must name the most urgent item (if anything is pending).
+      const start = dashboard.deadlines[0]?.title;
+      if (start && !parsed.data.briefing.toLowerCase().includes(start.toLowerCase())) return fallback;
       return { briefing: parsed.data.briefing, source: 'ai' };
     },
   };

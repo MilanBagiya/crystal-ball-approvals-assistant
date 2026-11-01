@@ -23,7 +23,7 @@ describe('GET /api/dashboard', () => {
 
 describe('POST /api/ai/briefing', () => {
   it('returns the AI briefing', async () => {
-    const briefing = '4 items are waiting, 1 overdue by 12 hours: start with the safety specs.';
+    const briefing = '4 items are waiting, 1 overdue by 12 hours: start with Safety Equipment & Sensor Specs.';
     const { app, usage } = buildTestApp({ now, llm: fakeLlm([JSON.stringify({ briefing })]) });
 
     const res = await request(app).post('/api/ai/briefing').send({});
