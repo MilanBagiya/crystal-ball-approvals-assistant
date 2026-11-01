@@ -142,7 +142,7 @@ server-side. Clients never send it.
 Events: `token`…, then `done`. When the LLM is unavailable:
 
 - `talk`: `fallback` with "The assistant is unavailable right now. Here's the current queue in priority order:" followed
-  by the ranked list.
+  by the ranked pending items and, if any, an "Already decided:" list with each decision.
 - `teach`: `fallback` with the static 5-step review guide.
 
 ---

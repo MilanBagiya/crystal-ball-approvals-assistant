@@ -167,7 +167,7 @@ npm run lint           # ESLint (no `any` allowed)
 npm run format:check   # Prettier
 ```
 
-Current totals: **365 API tests and 80 web tests**. Coverage: API 96.6% statements / 85.4% branches, web 93.3% /
+Current totals: **369 API tests and 80 web tests**. Coverage: API 96.6% statements / 85.4% branches, web 93.3% /
 82.8%. Every feature was built test-first: the history shows a failing `test(...) (red)` commit before each
 `feat(...) (green)` commit.
 
@@ -192,6 +192,10 @@ All five actions were also run live against a small local model (`qwen2.5:3b` vi
   French summary reasons in English; a larger model such as Claude follows the language instruction reliably.
 - **Teach 1.0.0** used markdown bold and mentioned "the `<policy>` section". **Teach 1.1.0** asks for plain text and
   keeps the prompt structure hidden, and the panel now renders any `**bold**` safely as bold text.
+- **Talk 1.0.0** only saw the pending items, so after a decision the model guessed which items were "decided" and got
+  it wrong, and it repeated internal ids like `[a3]`. **Talk 1.1.0** gets decided items in their own block (decision,
+  date, comment), never sees ids, and is told the current queue wins over its earlier replies. Live, it then listed
+  pending and decided items correctly in 2 of 2 runs.
 
 The LLM is always a fake in tests: hand-rolled `LlmClient` fakes that stream, hang, stall mid-answer or fail. The real
 Anthropic client is tested through the actual SDK with a fake `fetch`, so no test needs a network or a key.
@@ -357,8 +361,8 @@ check every view with screenshots, and to keep this README accurate.
 ## 8. Prompt versioning
 
 Prompts live only in [`apps/api/src/prompts/`](apps/api/src/prompts/), one file per prompt and version
-(`greeting.v1.ts`, `summary.v1.1.ts`, `review.v1.ts`, …). Active versions: greeting 1.2.0; summary, help, teach and
-search 1.1.0; talk, review, comment and briefing 1.0.0. Every newer version came from a problem seen when running a
+(`greeting.v1.ts`, `summary.v1.1.ts`, `review.v1.ts`, …). Active versions: greeting 1.2.0; summary, help, talk, teach
+and search 1.1.0; review, comment and briefing 1.0.0. Every newer version came from a problem seen when running a
 small local model, recorded in the file's header comment. Each exports an object with an `id`,
 a semver `version`, the system prompt and a builder for the user message. [`prompts/index.ts`](apps/api/src/prompts/index.ts)
 is the registry of active versions.
