@@ -3,6 +3,7 @@
 import type { ApprovalItem } from '@approvals/contracts';
 import { ListFilter } from 'lucide-react';
 import { useEffect } from 'react';
+import { itemCount } from '@/lib/format';
 import { useAssistantStore } from '@/store/assistantStore';
 import { StatusBadge } from './StatusBadge';
 import { shortDate, TYPE_STYLES } from './typeStyles';
@@ -42,7 +43,7 @@ export function ApprovalsTable({ query = '', selectedId, onSelect }: ApprovalsTa
         </h2>
         {approvals.status === 'done' && (
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-            {approvals.items.filter((item) => item.status === 'pending_review').length} items
+            {itemCount(approvals.items.filter((item) => item.status === 'pending_review').length)}
           </span>
         )}
       </div>
