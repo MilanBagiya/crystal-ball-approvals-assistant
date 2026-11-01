@@ -12,8 +12,10 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
 import { getJson } from '@/lib/sseClient';
+import { PlaceholderButton } from './PlaceholderButton';
 import { useAssistantStore } from '@/store/assistantStore';
 
 // A simplified dashboard shell around the Approvals page. Only "Approvals" is a real page in this demo.
@@ -70,20 +72,28 @@ function SideNav() {
       <span aria-hidden="true" className="mb-2 grid size-9 place-items-center text-slate-400">
         <PanelLeft className="size-5" />
       </span>
-      {NAV.map(({ label, icon: Icon, current }) => (
-        <a
-          key={label}
-          href={current ? '/' : `#${label.toLowerCase()}`}
-          aria-label={label}
-          aria-current={current ? 'page' : undefined}
-          title={current ? label : `${label} (not part of this demo)`}
-          className={`grid size-10 place-items-center rounded-xl transition focus-visible:outline-2 focus-visible:outline-violet-500 ${
-            current ? 'bg-violet-100 text-violet-700' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
-          }`}
-        >
-          <Icon aria-hidden="true" className="size-5" />
-        </a>
-      ))}
+      {NAV.map(({ label, icon: Icon, current }) =>
+        current ? (
+          <Link
+            key={label}
+            href="/"
+            aria-label={label}
+            aria-current="page"
+            title={label}
+            className="grid size-10 place-items-center rounded-xl bg-violet-100 text-violet-700 transition focus-visible:outline-2 focus-visible:outline-violet-500"
+          >
+            <Icon aria-hidden="true" className="size-5" />
+          </Link>
+        ) : (
+          <PlaceholderButton
+            key={label}
+            label={label}
+            className="grid size-10 place-items-center rounded-xl text-slate-400 focus-visible:outline-2 focus-visible:outline-violet-500"
+          >
+            <Icon aria-hidden="true" className="size-5" />
+          </PlaceholderButton>
+        ),
+      )}
     </nav>
   );
 }

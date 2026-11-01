@@ -1,7 +1,13 @@
 import {
   ApprovalsResponseSchema,
   GreetingResponseSchema,
+  CommentDraftResponseSchema,
+  DecisionResponseSchema,
+  ReviewResponseSchema,
   type ApprovalItem,
+  type CommentDraftResponse,
+  type Decision,
+  type ReviewResponse,
   type ChatMessage,
   type FallbackReason,
   type StreamEvent,
@@ -43,9 +49,17 @@ export interface ApprovalsState {
   status: 'idle' | 'loading' | 'done' | 'error';
 }
 
+export interface ReviewState {
+  status: 'loading' | 'done' | 'error';
+  data?: ReviewResponse;
+  error?: RequestFailure;
+}
+
 interface AssistantData {
   isOpen: boolean;
   approvals: ApprovalsState;
+  /** AI pre-review results, per item id. */
+  reviews: Record<string, ReviewState>;
   view: View;
   greeting: GreetingState;
   conversations: Record<Mode, UiMessage[]>;
@@ -65,6 +79,14 @@ interface AssistantActions {
   runSummary(): Promise<void>;
   sendMessage(mode: Mode, text: string): Promise<void>;
   retry(): Promise<void>;
+  /** Records a reviewer decision; resolves to an error to show, or undefined on success. */
+  decide(id: string, decision: Decision, comment?: string): Promise<RequestFailure | undefined>;
+  runReview(id: string): Promise<void>;
+  draftComment(
+    id: string,
+    decision: Exclude<Decision, 'approve'>,
+    notes: string,
+  ): Promise<CommentDraftResponse | RequestFailure>;
 }
 
 export type AssistantState = AssistantData & AssistantActions & { readonly sessionId: string };
@@ -79,6 +101,7 @@ const GENERIC_GREETING = "Hi! I'm your Approvals assistant. Pick an option below
 const initialData = (): AssistantData => ({
   isOpen: true,
   approvals: { items: [], status: 'idle' },
+  reviews: {},
   view: 'home',
   greeting: { text: '', status: 'idle' },
   conversations: { talk: [], help: [], teach: [] },
@@ -229,6 +252,42 @@ export const useAssistantStore = create<AssistantState>()((set, get) => {
     setView: (view) => {
       inFlight?.abort();
       set({ view, status: 'idle', error: undefined, fallbackReason: undefined });
+    },
+
+    async decide(id, decision, comment) {
+      const body = { decision, ...(comment?.trim() ? { comment: comment.trim() } : {}) };
+      const result = await postJson(`/api/approvals/${encodeURIComponent(id)}/decision`, body, DecisionResponseSchema, {
+        sessionId,
+      });
+      if (!result.ok) return result.error;
+
+      set((state) => ({
+        approvals: {
+          ...state.approvals,
+          items: state.approvals.items.map((item) => (item.id === id ? result.data.item : item)),
+        },
+        // The queue changed: drop the old summary and refresh the greeting so the counts stay true.
+        summary: { items: [] },
+      }));
+      void get().loadGreeting();
+      return undefined;
+    },
+
+    async runReview(id) {
+      set((state) => ({ reviews: { ...state.reviews, [id]: { status: 'loading' } } }));
+      const result = await postJson('/api/ai/review', { itemId: id }, ReviewResponseSchema, { sessionId });
+      set((state) => ({
+        reviews: {
+          ...state.reviews,
+          [id]: result.ok ? { status: 'done', data: result.data } : { status: 'error', error: result.error },
+        },
+      }));
+    },
+
+    async draftComment(id, decision, notes) {
+      const body = { itemId: id, decision, ...(notes.trim() ? { notes: notes.trim() } : {}) };
+      const result = await postJson('/api/ai/comment', body, CommentDraftResponseSchema, { sessionId });
+      return result.ok ? result.data : result.error;
     },
 
     async loadApprovals() {

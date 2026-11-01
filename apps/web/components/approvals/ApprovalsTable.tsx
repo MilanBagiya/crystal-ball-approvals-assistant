@@ -4,7 +4,8 @@ import type { ApprovalItem } from '@approvals/contracts';
 import { ListFilter } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAssistantStore } from '@/store/assistantStore';
-import { shortDate, STATUS_LABELS, TYPE_STYLES } from './typeStyles';
+import { StatusBadge } from './StatusBadge';
+import { shortDate, TYPE_STYLES } from './typeStyles';
 
 interface ApprovalsTableProps {
   query?: string;
@@ -41,7 +42,7 @@ export function ApprovalsTable({ query = '', selectedId, onSelect }: ApprovalsTa
         </h2>
         {approvals.status === 'done' && (
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-            {approvals.items.length} items
+            {approvals.items.filter((item) => item.status === 'pending_review').length} items
           </span>
         )}
       </div>
@@ -125,9 +126,7 @@ export function ApprovalsTable({ query = '', selectedId, onSelect }: ApprovalsTa
                       {shortDate(item.submittedAt)}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-orange-700">
-                        {STATUS_LABELS[item.status] ?? item.status}
-                      </span>
+                      <StatusBadge status={item.status} />
                     </td>
                   </tr>
                 );

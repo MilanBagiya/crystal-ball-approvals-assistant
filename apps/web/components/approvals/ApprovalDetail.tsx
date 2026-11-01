@@ -3,6 +3,9 @@
 import type { ApprovalItem } from '@approvals/contracts';
 import { ChevronRight, Sparkles } from 'lucide-react';
 import { useAssistantStore } from '@/store/assistantStore';
+import { DecisionPanel } from './DecisionPanel';
+import { PreReviewPanel } from './PreReviewPanel';
+import { StatusBadge } from './StatusBadge';
 import { longDate, STATUS_LABELS, TYPE_STYLES } from './typeStyles';
 
 /** The right-hand pane: where the selected item lives and who submitted it, plus a hand-off to the assistant. */
@@ -14,6 +17,7 @@ export function ApprovalDetail({ item }: { item: ApprovalItem }) {
   const type = TYPE_STYLES[item.type];
   const Icon = type.icon;
   const breadcrumb = item.path.split('›').map((part) => part.trim());
+  const pending = item.status === 'pending_review';
 
   const askAssistant = () => {
     open();
@@ -43,15 +47,11 @@ export function ApprovalDetail({ item }: { item: ApprovalItem }) {
       </div>
 
       <div className="flex flex-col gap-4 px-5 py-4">
-        <div
-          className={`grid aspect-video place-items-center rounded-xl border border-dashed border-slate-200 bg-slate-50`}
-        >
-          <div className="flex flex-col items-center gap-2 text-center">
-            <span className={`grid size-14 place-items-center rounded-2xl ${type.tile}`}>
-              <Icon aria-hidden="true" className="size-7" />
-            </span>
-            <p className="text-xs text-slate-500">Preview isn&apos;t available in this demo.</p>
-          </div>
+        <div className="flex items-center gap-3 rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3">
+          <span className={`grid size-11 shrink-0 place-items-center rounded-xl ${type.tile}`}>
+            <Icon aria-hidden="true" className="size-6" />
+          </span>
+          <p className="text-xs text-slate-500">Preview isn&apos;t available in this demo.</p>
         </div>
 
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
@@ -61,7 +61,9 @@ export function ApprovalDetail({ item }: { item: ApprovalItem }) {
           </div>
           <div>
             <dt className="text-xs text-slate-500">Status</dt>
-            <dd className="font-medium text-orange-700">{STATUS_LABELS[item.status] ?? item.status}</dd>
+            <dd>
+              <StatusBadge status={item.status} />
+            </dd>
           </div>
           <div>
             <dt className="text-xs text-slate-500">Submitted by</dt>
@@ -72,6 +74,21 @@ export function ApprovalDetail({ item }: { item: ApprovalItem }) {
             <dd className="font-medium text-slate-800">{longDate(item.submittedAt)}</dd>
           </div>
         </dl>
+
+        {pending ? (
+          <>
+            <PreReviewPanel itemId={item.id} />
+            <DecisionPanel key={item.id} item={item} />
+          </>
+        ) : (
+          <div className="rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
+            <p className="font-medium">
+              {STATUS_LABELS[item.status]}
+              {item.reviewedAt ? ` on ${longDate(item.reviewedAt.slice(0, 10))}` : ''}
+            </p>
+            {item.reviewComment && <p className="mt-1 whitespace-pre-wrap text-slate-600">{item.reviewComment}</p>}
+          </div>
+        )}
 
         <button
           type="button"

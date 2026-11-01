@@ -2,6 +2,7 @@
 
 import { ArrowLeft, Info, Search } from 'lucide-react';
 import { useState } from 'react';
+import { PlaceholderButton } from '@/components/layout/PlaceholderButton';
 import { useAssistantStore } from '@/store/assistantStore';
 import { ApprovalDetail } from './ApprovalDetail';
 import { ApprovalsTable } from './ApprovalsTable';
@@ -18,13 +19,10 @@ export function ApprovalsWorkspace() {
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex flex-col gap-3 rounded-2xl bg-white px-4 py-4 shadow-sm ring-1 ring-slate-200 sm:px-5">
         <div className="flex flex-wrap items-center gap-3">
-          <a
-            href="#dashboard"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-violet-500"
-          >
+          <PlaceholderButton className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 focus-visible:outline-2 focus-visible:outline-violet-500">
             <ArrowLeft aria-hidden="true" className="size-3.5" />
             Back to Dashboard
-          </a>
+          </PlaceholderButton>
           <span className="inline-flex items-center gap-2">
             <h1 className="text-lg font-semibold text-slate-900">Approvals &amp; Review</h1>
             <span

@@ -2,6 +2,7 @@
 
 import { ArrowUpRight, Bot, Home, Info, Maximize2, Minimize2, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { PlaceholderButton } from '@/components/layout/PlaceholderButton';
 import { useAssistantStore, type View } from '@/store/assistantStore';
 import { ActionView } from './ActionView';
 import { HomeView } from './HomeView';
@@ -66,7 +67,8 @@ export function AssistantPanel() {
 
   if (!isOpen) return <FloatingButton />;
 
-  const count = approvals.status === 'done' ? `${approvals.items.length} items` : 'Loading items…';
+  const pendingCount = approvals.items.filter((item) => item.status === 'pending_review').length;
+  const count = approvals.status === 'done' ? `${pendingCount} items` : 'Loading items…';
   // Home fits its content; chat and summary get a fixed height so the conversation has room to scroll.
   const width = expanded ? 'sm:w-[560px]' : 'sm:w-[400px]';
   const height = view === 'home' ? '' : expanded ? 'h-[85dvh]' : 'h-[600px]';
@@ -142,13 +144,10 @@ export function AssistantPanel() {
 
       <footer className="mt-auto flex items-center justify-between border-t border-slate-100 px-4 py-2 text-xs text-slate-500">
         <span>{count}</span>
-        <a
-          href="#hms-panel"
-          className="inline-flex items-center gap-0.5 font-medium text-slate-700 hover:text-slate-900"
-        >
+        <PlaceholderButton className="inline-flex items-center gap-0.5 font-medium text-slate-700">
           HMS Panel
           <ArrowUpRight aria-hidden="true" className="size-3.5" />
-        </a>
+        </PlaceholderButton>
       </footer>
     </section>
   );
