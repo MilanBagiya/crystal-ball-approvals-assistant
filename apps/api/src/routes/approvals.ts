@@ -12,6 +12,12 @@ export function approvalRoutes(queue: ApprovalQueue): Router {
     sendJson(res, ApprovalsResponseSchema, { items: [...queue.list()] });
   });
 
+  // Demo convenience: undo every decision. The queue lives in memory, so this is the same as a restart.
+  router.post('/reset', (_req, res) => {
+    queue.reset();
+    sendJson(res, ApprovalsResponseSchema, { items: [...queue.list()] });
+  });
+
   // A reviewer's decision. Deterministic and AI-free: the model can suggest checks and draft comments, never decide.
   router.post(
     '/:id/decision',

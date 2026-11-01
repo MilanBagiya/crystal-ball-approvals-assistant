@@ -1,4 +1,5 @@
 import {
+  BriefingResponseSchema,
   ChatRequestSchema,
   CommentDraftRequestSchema,
   CommentDraftResponseSchema,
@@ -12,10 +13,12 @@ import {
 } from '@approvals/contracts';
 import { Router } from 'express';
 import type { ApprovalQueue } from '../domain/approvalQueue';
+import { buildDashboard } from '../domain/dashboard';
 import { HttpError } from '../http/errorHandler';
 import { pipeSse } from '../http/pipeSse';
 import { sendJson, validateBody } from '../http/validate';
 import type { Logger } from '../logging/logger';
+import type { BriefingService } from '../services/briefingService';
 import type { ChatService } from '../services/chatService';
 import type { CommentService } from '../services/commentService';
 import type { GreetingService } from '../services/greetingService';
@@ -30,11 +33,21 @@ export interface AiServices {
   chat: ChatService;
   review: ReviewService;
   comment: CommentService;
+  briefing: BriefingService;
 }
 
 // Thin handlers: validate the body, call a service, send a validated response. No prompts, no LLM calls here.
-export function aiRoutes(services: AiServices, logger: Logger, queue: ApprovalQueue): Router {
+export function aiRoutes(
+  services: AiServices,
+  logger: Logger,
+  queue: ApprovalQueue,
+  now: () => Date = () => new Date(),
+): Router {
   const router = Router();
+
+  router.post('/briefing', async (_req, res) => {
+    sendJson(res, BriefingResponseSchema, await services.briefing.brief(buildDashboard(queue.list(), now())));
+  });
 
   router.post(
     '/greeting',

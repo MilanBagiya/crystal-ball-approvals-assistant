@@ -17,7 +17,9 @@ import { createChatService } from './services/chatService';
 import { createCommentService } from './services/commentService';
 import { createGreetingService } from './services/greetingService';
 import { createHelpService } from './services/helpService';
+import { createBriefingService } from './services/briefingService';
 import { createReviewService } from './services/reviewService';
+import { dashboardRoutes } from './routes/dashboard';
 import { createSummaryService } from './services/summaryService';
 
 export interface AppDeps {
@@ -27,6 +29,8 @@ export interface AppDeps {
   config: Pick<AppConfig, 'llmTimeoutMs' | 'rateLimitPerMin'>;
   logUsage: UsageLogger;
   logger: Logger;
+  /** The clock, injectable so deadlines and timestamps are deterministic in tests. */
+  now?: () => Date;
 }
 
 // App factory: everything external is injected, so Supertest builds an app with fakes and no network.
@@ -39,7 +43,8 @@ export function createApp(deps: AppDeps): Express {
   app.use(express.json({ limit: '32kb' }));
 
   // The queue lives in memory for the life of the process; decisions update it (a restart resets the demo).
-  const queue = createApprovalQueue(deps.approvals);
+  const now = deps.now ?? (() => new Date());
+  const queue = createApprovalQueue(deps.approvals, now);
   const listApprovals = () => queue.list();
 
   const runner = createLlmRunner({ llm: deps.llm, timeoutMs: deps.config.llmTimeoutMs, logUsage: deps.logUsage });
@@ -50,12 +55,14 @@ export function createApp(deps: AppDeps): Express {
     chat: createChatService({ runner, listApprovals, policyChunks: deps.policyChunks }),
     review: createReviewService({ runner, policyChunks: deps.policyChunks }),
     comment: createCommentService({ runner, policyChunks: deps.policyChunks }),
+    briefing: createBriefingService({ runner }),
   };
 
   app.use('/api', systemRoutes({ llm: deps.llm }));
   app.use('/api/approvals', approvalRoutes(queue));
+  app.use('/api/dashboard', dashboardRoutes(queue, now));
   // Rate limiting runs first, so over-limit requests never reach validation or the LLM.
-  app.use('/api/ai', ...aiRateLimiters(deps.config.rateLimitPerMin), aiRoutes(services, deps.logger, queue));
+  app.use('/api/ai', ...aiRateLimiters(deps.config.rateLimitPerMin), aiRoutes(services, deps.logger, queue, now));
 
   app.use(notFoundHandler);
   app.use(errorHandler(deps.logger));

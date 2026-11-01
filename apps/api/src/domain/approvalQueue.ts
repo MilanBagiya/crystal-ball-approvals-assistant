@@ -14,6 +14,10 @@ export function createApprovalQueue(seed: readonly ApprovalItem[], now: () => Da
   const items = seed.map((item) => ({ ...item }));
 
   return {
+    /** Puts every item back to its seeded state, so a demo can start over. */
+    reset(): void {
+      items.splice(0, items.length, ...seed.map((item) => ({ ...item })));
+    },
     list: (): readonly ApprovalItem[] => items,
     get: (id: string): ApprovalItem | undefined => items.find((item) => item.id === id),
 

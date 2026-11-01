@@ -9,3 +9,4 @@ export * from './errors';
 export * from './health';
 export * from './review';
 export * from './comment';
+export * from './dashboard';
