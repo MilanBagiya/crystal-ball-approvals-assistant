@@ -167,7 +167,7 @@ npm run lint           # ESLint (no `any` allowed)
 npm run format:check   # Prettier
 ```
 
-Current totals: **369 API tests and 80 web tests**. Coverage: API 96.6% statements / 85.4% branches, web 93.3% /
+Current totals: **375 API tests and 82 web tests**. Coverage: API 96.6% statements / 85.4% branches, web 93.3% /
 82.8%. Every feature was built test-first: the history shows a failing `test(...) (red)` commit before each
 `feat(...) (green)` commit.
 
@@ -240,13 +240,14 @@ Anthropic client is tested through the actual SDK with a fake `fetch`, so no tes
 
 Try each action in the panel after any of these (restart `npm run dev` after editing `.env`):
 
-| Setting                             | What you'll see                                                                                                     |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| No `ANTHROPIC_API_KEY`              | Template greeting, ranked-list summary, policy-text answers, the 5-step guide. `/api/health` says `not_configured`. |
-| `FORCE_LLM_FAILURE=true`            | The same, even with a valid key.                                                                                    |
-| `LLM_TIMEOUT_MS=1` (with a key)     | Every call times out; fallbacks are marked `timeout`.                                                               |
-| Stop the API while the page is open | An error with a **Retry** button (no frozen spinner: the client gives up after 15 s idle).                          |
-| Ask Help something off-topic        | "The policy doesn't cover this…", answered without calling the model.                                               |
+| Setting                                  | What you'll see                                                                                                     |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| No `ANTHROPIC_API_KEY`                   | Template greeting, ranked-list summary, policy-text answers, the 5-step guide. `/api/health` says `not_configured`. |
+| `FORCE_LLM_FAILURE=true`                 | The same, even with a valid key.                                                                                    |
+| `LLM_TIMEOUT_MS=1` (with a key)          | Every call times out; fallbacks are marked `timeout`.                                                               |
+| Stop the API while the page is open      | An error with a **Retry** button (no frozen spinner: the client gives up after 15 s idle).                          |
+| Stop Ollama (with `LLM_PROVIDER=ollama`) | Every action falls back (`llm_error`). Within 20 s the status bar says "AI unreachable: standard answers".          |
+| Ask Help something off-topic             | "The policy doesn't cover this…", answered without calling the model.                                               |
 
 Every LLM call writes one JSON line to the API console. An illustrative example (the token numbers are made up):
 `{"event":"llm_call","promptId":"summary","promptVersion":"1.0.0","model":"claude-haiku-5-5","inputTokens":512,"outputTokens":180,"latencyMs":1430,"outcome":"ok"}`.

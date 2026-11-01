@@ -61,7 +61,9 @@ Response `200`:
 { "ok": true, "llm": "configured" }
 ```
 
-`llm` is `not_configured` when there's no API key or `FORCE_LLM_FAILURE=true`.
+`llm` is `not_configured` when there's no API key or `FORCE_LLM_FAILURE=true`, and `unreachable` when a provider is
+configured but doesn't answer a quick check within 1.5 s (Ollama lists its models; Claude is assumed up while a key
+is set). The web status bar polls this every 20 s.
 
 ## `GET /api/approvals`
 
