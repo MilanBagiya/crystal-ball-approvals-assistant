@@ -9,23 +9,46 @@ import {
   LayoutGrid,
   PanelLeft,
   RefreshCw,
+  RotateCcw,
   Users,
   type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { getJson } from '@/lib/sseClient';
 import { PlaceholderButton } from './PlaceholderButton';
 import { useAssistantStore } from '@/store/assistantStore';
 
-// A simplified dashboard shell around the Approvals page. Only "Approvals" is a real page in this demo.
-const NAV: { label: string; icon: LucideIcon; current?: boolean }[] = [
-  { label: 'Dashboard', icon: LayoutGrid },
-  { label: 'Approvals', icon: ClipboardCheck, current: true },
+// A simplified dashboard shell. Dashboard and Approvals are real pages; the rest are placeholders.
+const NAV: { label: string; icon: LucideIcon; href?: string }[] = [
+  { label: 'Dashboard', icon: LayoutGrid, href: '/dashboard' },
+  { label: 'Approvals', icon: ClipboardCheck, href: '/' },
   { label: 'Sites', icon: Building2 },
   { label: 'Team', icon: Users },
   { label: 'Reports', icon: BarChart3 },
 ];
+
+function ResetDemoButton() {
+  const resetDemo = useAssistantStore((s) => s.resetDemo);
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        setBusy(true);
+        await resetDemo();
+        setBusy(false);
+      }}
+      disabled={busy}
+      title="Undo every decision and start the demo over"
+      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-violet-500 disabled:opacity-60"
+    >
+      <RotateCcw aria-hidden="true" className="size-3.5" />
+      Reset demo data
+    </button>
+  );
+}
 
 function TopBar() {
   return (
@@ -35,6 +58,7 @@ function TopBar() {
         <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase">Site operations</p>
       </div>
       <div className="flex items-center gap-1">
+        <ResetDemoButton />
         <button
           type="button"
           aria-label="Refresh page"
@@ -64,6 +88,7 @@ function TopBar() {
 }
 
 function SideNav() {
+  const pathname = usePathname();
   return (
     <nav
       aria-label="Main"
@@ -72,15 +97,19 @@ function SideNav() {
       <span aria-hidden="true" className="mb-2 grid size-9 place-items-center text-slate-400">
         <PanelLeft className="size-5" />
       </span>
-      {NAV.map(({ label, icon: Icon, current }) =>
-        current ? (
+      {NAV.map(({ label, icon: Icon, href }) =>
+        href ? (
           <Link
             key={label}
-            href="/"
+            href={href}
             aria-label={label}
-            aria-current="page"
+            aria-current={pathname === href ? 'page' : undefined}
             title={label}
-            className="grid size-10 place-items-center rounded-xl bg-violet-100 text-violet-700 transition focus-visible:outline-2 focus-visible:outline-violet-500"
+            className={`grid size-10 place-items-center rounded-xl transition focus-visible:outline-2 focus-visible:outline-violet-500 ${
+              pathname === href
+                ? 'bg-violet-100 text-violet-700'
+                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+            }`}
           >
             <Icon aria-hidden="true" className="size-5" />
           </Link>
@@ -132,12 +161,16 @@ function StatusBar() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
+  // On wide screens, make room for the open assistant panel so it never covers the page.
+  const panelOpen = useAssistantStore((s) => s.isOpen);
   return (
     <div className="flex h-dvh flex-col bg-slate-100/70">
       <TopBar />
       <div className="flex min-h-0 flex-1">
         <SideNav />
-        <main className="flex min-h-0 flex-1 flex-col overflow-auto p-3 sm:p-5">{children}</main>
+        <main className={`flex min-h-0 flex-1 flex-col overflow-auto p-3 sm:p-5 ${panelOpen ? 'xl:pr-[27rem]' : ''}`}>
+          {children}
+        </main>
       </div>
       <StatusBar />
     </div>

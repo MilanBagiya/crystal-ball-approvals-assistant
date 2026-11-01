@@ -1,13 +1,19 @@
 import {
   ApprovalsResponseSchema,
+  BriefingResponseSchema,
+  DashboardSchema,
   GreetingResponseSchema,
   CommentDraftResponseSchema,
   DecisionResponseSchema,
   ReviewResponseSchema,
+  SearchResponseSchema,
   type ApprovalItem,
+  type BriefingResponse,
   type CommentDraftResponse,
+  type Dashboard,
   type Decision,
   type ReviewResponse,
+  type SearchResponse,
   type ChatMessage,
   type FallbackReason,
   type StreamEvent,
@@ -55,11 +61,23 @@ export interface ReviewState {
   error?: RequestFailure;
 }
 
+/** A request's lifecycle plus its validated result. */
+export interface Loadable<T> {
+  status: 'idle' | 'loading' | 'done' | 'error';
+  data?: T;
+  error?: RequestFailure;
+}
+
 interface AssistantData {
   isOpen: boolean;
   approvals: ApprovalsState;
+  /** The item open in the detail pane; shared so the Dashboard can open an item on the Approvals page. */
+  selectedId?: string;
   /** AI pre-review results, per item id. */
   reviews: Record<string, ReviewState>;
+  dashboard: Loadable<Dashboard>;
+  briefing: Loadable<BriefingResponse>;
+  search: Loadable<SearchResponse>;
   view: View;
   greeting: GreetingState;
   conversations: Record<Mode, UiMessage[]>;
@@ -87,6 +105,13 @@ interface AssistantActions {
     decision: Exclude<Decision, 'approve'>,
     notes: string,
   ): Promise<CommentDraftResponse | RequestFailure>;
+  selectItem(id: string | undefined): void;
+  loadDashboard(): Promise<void>;
+  loadBriefing(): Promise<void>;
+  runSearch(query: string): Promise<void>;
+  clearSearch(): void;
+  /** Undoes every decision (the API keeps the queue in memory). */
+  resetDemo(): Promise<void>;
 }
 
 export type AssistantState = AssistantData & AssistantActions & { readonly sessionId: string };
@@ -101,7 +126,11 @@ const GENERIC_GREETING = "Hi! I'm your Approvals assistant. Pick an option below
 const initialData = (): AssistantData => ({
   isOpen: true,
   approvals: { items: [], status: 'idle' },
+  selectedId: undefined,
   reviews: {},
+  dashboard: { status: 'idle' },
+  briefing: { status: 'idle' },
+  search: { status: 'idle' },
   view: 'home',
   greeting: { text: '', status: 'idle' },
   conversations: { talk: [], help: [], teach: [] },
@@ -249,6 +278,43 @@ export const useAssistantStore = create<AssistantState>()((set, get) => {
 
     open: () => set({ isOpen: true }),
     close: () => set({ isOpen: false }),
+    selectItem: (id) => set({ selectedId: id }),
+
+    async loadDashboard() {
+      set((state) => ({ dashboard: { ...state.dashboard, status: 'loading' } }));
+      const result = await getJson('/api/dashboard', DashboardSchema, { sessionId });
+      set({ dashboard: result.ok ? { status: 'done', data: result.data } : { status: 'error', error: result.error } });
+    },
+
+    async loadBriefing() {
+      set((state) => ({ briefing: { ...state.briefing, status: 'loading' } }));
+      const result = await postJson('/api/ai/briefing', {}, BriefingResponseSchema, { sessionId });
+      set({ briefing: result.ok ? { status: 'done', data: result.data } : { status: 'error', error: result.error } });
+    },
+
+    async runSearch(query) {
+      set({ search: { status: 'loading' } });
+      const result = await postJson('/api/ai/search', { query }, SearchResponseSchema, { sessionId });
+      set({ search: result.ok ? { status: 'done', data: result.data } : { status: 'error', error: result.error } });
+    },
+
+    clearSearch: () => set({ search: { status: 'idle' } }),
+
+    async resetDemo() {
+      const result = await postJson('/api/approvals/reset', {}, ApprovalsResponseSchema, { sessionId });
+      if (!result.ok) return;
+      set({
+        approvals: { items: result.data.items, status: 'done' },
+        reviews: {},
+        summary: { items: [] },
+        search: { status: 'idle' },
+      });
+      void get().loadGreeting();
+      if (get().dashboard.status !== 'idle') {
+        void get().loadDashboard();
+        void get().loadBriefing();
+      }
+    },
     setView: (view) => {
       inFlight?.abort();
       set({ view, status: 'idle', error: undefined, fallbackReason: undefined });
@@ -270,6 +336,8 @@ export const useAssistantStore = create<AssistantState>()((set, get) => {
         summary: { items: [] },
       }));
       void get().loadGreeting();
+      // A search result is a list of ids worked out against the old statuses; drop it rather than show it stale.
+      if (get().search.status !== 'idle') set({ search: { status: 'idle' } });
       return undefined;
     },
 

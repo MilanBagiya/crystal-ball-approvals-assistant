@@ -10,6 +10,8 @@ import { shortDate, TYPE_STYLES } from './typeStyles';
 
 interface ApprovalsTableProps {
   query?: string;
+  /** Limits the rows to these ids (an AI search result), in queue order. */
+  onlyIds?: readonly string[];
   selectedId?: string;
   onSelect?: (id: string) => void;
 }
@@ -21,7 +23,7 @@ function matches(item: ApprovalItem, query: string): boolean {
   return [item.title, item.submittedBy, item.path, item.type].some((field) => field.toLowerCase().includes(needle));
 }
 
-export function ApprovalsTable({ query = '', selectedId, onSelect }: ApprovalsTableProps) {
+export function ApprovalsTable({ query = '', onlyIds, selectedId, onSelect }: ApprovalsTableProps) {
   const approvals = useAssistantStore((s) => s.approvals);
   const loadApprovals = useAssistantStore((s) => s.loadApprovals);
 
@@ -29,7 +31,7 @@ export function ApprovalsTable({ query = '', selectedId, onSelect }: ApprovalsTa
     if (approvals.status === 'idle') void loadApprovals();
   }, [approvals.status, loadApprovals]);
 
-  const visible = approvals.items.filter((item) => matches(item, query));
+  const visible = approvals.items.filter((item) => matches(item, query) && (!onlyIds || onlyIds.includes(item.id)));
 
   return (
     <section
@@ -136,7 +138,7 @@ export function ApprovalsTable({ query = '', selectedId, onSelect }: ApprovalsTa
           </table>
           {visible.length === 0 && (
             <p className="px-4 py-8 text-center text-sm text-slate-500">
-              No approvals match &quot;{query.trim()}&quot;.
+              {query.trim() ? <>No approvals match &quot;{query.trim()}&quot;.</> : 'No approvals match this search.'}
             </p>
           )}
         </div>

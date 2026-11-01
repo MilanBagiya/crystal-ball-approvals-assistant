@@ -1,3 +1,4 @@
+import { ApprovalItemSchema } from '@approvals/contracts';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import HomePage from '@/app/page';
@@ -48,7 +49,9 @@ describe('navigation', () => {
 
 describe('Reset demo data', () => {
   it('puts every item back to pending', async () => {
-    const decided = seedApprovals.map((item, i) => (i === 0 ? { ...item, status: 'approved' } : item));
+    const decided = ApprovalItemSchema.array().parse(
+      seedApprovals.map((item, i) => (i === 0 ? { ...item, status: 'approved' } : item)),
+    );
     const { fetchFn, user } = renderHome({ '/api/approvals/reset': () => jsonResponse(200, { items: seedApprovals }) });
     await screen.findByRole('table');
     useAssistantStore.setState({ approvals: { items: decided, status: 'done' } });
