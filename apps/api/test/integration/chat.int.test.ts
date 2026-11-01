@@ -1,3 +1,4 @@
+import request from 'supertest';
 import { formatTeachFallback } from '../../src/content/teachSteps';
 import { UnavailableLlmClient } from '../../src/llm/UnavailableLlmClient';
 import { fakeLlm, stallingLlm } from '../fakes/fakeLlm';
@@ -20,7 +21,7 @@ describe('POST /api/ai/chat', () => {
       { type: 'token', text: 'the safety specs.' },
       { type: 'done' },
     ]);
-    expect(llm.requests[0]?.system).toContain('rank 1 (high) [a3] "Safety Equipment & Sensor Specs"');
+    expect(llm.requests[0]?.system).toContain('rank 1 (high) "Safety Equipment & Sensor Specs"');
     expect(llm.requests[0]?.messages).toEqual([{ role: 'user', content: 'What should I review first?' }]);
     expect(usage).toMatchObject([{ promptId: 'talk', outcome: 'ok' }]);
   });
@@ -59,6 +60,37 @@ describe('POST /api/ai/chat', () => {
     const content = events[0]?.type === 'fallback' ? events[0].content : '';
     expect(content).toMatch(/^The assistant is unavailable right now\. Here's the current queue in priority order:/);
     expect(content).toMatch(/1\. Safety Equipment & Sensor Specs \(high\)/);
+  });
+
+  it('after decisions, talk sees only pending items as waiting and the decided ones in their own block', async () => {
+    const llm = fakeLlm(['Two items are left.']);
+    const { app } = buildTestApp({ llm });
+    await request(app).post('/api/approvals/a2/decision').send({ decision: 'approve' });
+    await request(app)
+      .post('/api/approvals/a3/decision')
+      .send({ decision: 'request_changes', comment: 'Add the calibration date.' });
+
+    await postSse(app, '/api/ai/chat', talk('Which items are still pending and which are decided?'));
+
+    const system = llm.requests[0]?.system ?? '';
+    const pendingBlock = /<pending>([\s\S]*)<\/pending>/.exec(system)?.[1] ?? '';
+    const decidedBlock = /<decided>([\s\S]*)<\/decided>/.exec(system)?.[1] ?? '';
+    expect(pendingBlock).toContain('Site Patrol Onboarding & Checklists');
+    expect(pendingBlock).toContain('360° Spatial Zone Layout & Camera Map');
+    expect(pendingBlock).not.toMatch(/Level 2 Drone|Safety Equipment/);
+    expect(decidedBlock).toMatch(/"Level 2 Drone Patrol Video Demo": approved on \d{4}-\d{2}-\d{2}/);
+    expect(decidedBlock).toContain('"Safety Equipment & Sensor Specs": changes requested');
+  });
+
+  it('lists decided items after the ranked queue in the talk fallback', async () => {
+    const { app } = buildTestApp({ llm: new UnavailableLlmClient('no_api_key') });
+    await request(app).post('/api/approvals/a2/decision').send({ decision: 'approve' });
+
+    const { events } = await postSse(app, '/api/ai/chat', talk('What is left?'));
+
+    const content = events[0]?.type === 'fallback' ? events[0].content : '';
+    expect(content).toMatch(/1\. Safety Equipment & Sensor Specs \(high\)/);
+    expect(content).toMatch(/Already decided:\n- Level 2 Drone Patrol Video Demo: approved/);
   });
 
   it('falls back to the static five-step guide for teach when the LLM is unavailable', async () => {

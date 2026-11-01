@@ -3,6 +3,7 @@ import { rankApprovals } from '../../src/domain/urgency';
 import { activePrompts } from '../../src/prompts';
 import { SUMMARY_FILL_IN } from '../../src/prompts/summary.v1.1';
 import { summaryPromptV1 } from '../../src/prompts/summary.v1';
+import { talkPromptV1 } from '../../src/prompts/talk.v1';
 import { teachPromptV1 } from '../../src/prompts/teach.v1';
 import { greetingPromptV1 } from '../../src/prompts/greeting.v1';
 import { greetingPromptV1_1 } from '../../src/prompts/greeting.v1.1';
@@ -130,6 +131,43 @@ describe('chat prompts', () => {
       expect(system).toContain('Safety Equipment & Sensor Specs');
       expect(system).toContain('rank 1');
     }
+  });
+
+  it('talk 1.1.0 gives decided items their own block, hides internal ids, and trusts the current queue', () => {
+    // 1.0.0 only saw pending items, so after a decision a small model guessed which items were "decided",
+    // and it repeated ids like [a3] to the reviewer.
+    expect(activePrompts.talk.version).toBe('1.1.0');
+    expect(talkPromptV1.version).toBe('1.0.0');
+
+    const items = seedApprovals().map((item) =>
+      item.id === 'a2'
+        ? { ...item, status: 'approved' as const, reviewedAt: '2026-11-01T07:00:00.000Z' }
+        : item.id === 'a3'
+          ? { ...item, status: 'changes_requested' as const, reviewComment: 'Add the calibration date.' }
+          : item,
+    );
+    const pendingRanked = rankApprovals(items);
+    const decided = items.filter((item) => item.status !== 'pending_review');
+    const system = activePrompts.talk.buildSystem({ ranked: pendingRanked, decided });
+
+    const pendingBlock = /<pending>([\s\S]*)<\/pending>/.exec(system)?.[1] ?? '';
+    const decidedBlock = /<decided>([\s\S]*)<\/decided>/.exec(system)?.[1] ?? '';
+    expect(pendingBlock).toContain('rank 1 (medium) "Site Patrol Onboarding & Checklists"');
+    expect(pendingBlock).not.toContain('Level 2 Drone Patrol Video Demo');
+    expect(decidedBlock).toContain('"Level 2 Drone Patrol Video Demo": approved on 2026-11-01');
+    expect(decidedBlock).toContain(
+      '"Safety Equipment & Sensor Specs": changes requested, comment: "Add the calibration date."',
+    );
+    expect(system).not.toMatch(/\[a\d\]/);
+    expect(activePrompts.talk.system).toMatch(/never show internal ids/i);
+    expect(activePrompts.talk.system).toMatch(
+      /if an earlier reply in this conversation disagrees, the blocks are right/i,
+    );
+  });
+
+  it('talk 1.1.0 says plainly when nothing has been decided yet', () => {
+    const system = activePrompts.talk.buildSystem({ ranked, decided: [] });
+    expect(/<decided>([\s\S]*)<\/decided>/.exec(system)?.[1]).toContain('No items have been decided yet.');
   });
 
   it('teach asks for numbered steps, one concept at a time, ending with a follow-up invitation', () => {
