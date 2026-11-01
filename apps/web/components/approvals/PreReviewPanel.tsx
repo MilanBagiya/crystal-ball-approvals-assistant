@@ -17,7 +17,7 @@ export function PreReviewPanel({ itemId }: { itemId: string }) {
       <button
         type="button"
         onClick={() => void runReview(itemId)}
-        className="inline-flex items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-800 transition hover:bg-violet-100 focus-visible:outline-2 focus-visible:outline-violet-500"
+        className="inline-flex items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-semibold text-violet-800 transition hover:bg-violet-100 focus-visible:outline-2 focus-visible:outline-violet-500"
       >
         <ClipboardCheck aria-hidden="true" className="size-4" />
         AI pre-review
@@ -34,20 +34,20 @@ export function PreReviewPanel({ itemId }: { itemId: string }) {
 
   const { deadline, source, checks } = review.data;
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-violet-100 bg-violet-50/40 p-3">
+    <div className="flex flex-col gap-3 rounded-xl border border-violet-100 bg-violet-50/40 p-4">
       {source === 'fallback' && <FallbackNotice />}
       <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700">
         <Clock aria-hidden="true" className="size-3.5 text-violet-600" />
         {deadline}
       </p>
-      <ul aria-label="Review checklist" className="flex flex-col gap-2">
+      <ul aria-label="Review checklist" className="flex flex-col gap-3">
         {checks.map((check) => (
           <li key={`${check.chunkId}-${check.check}`} className="text-sm">
             <p className="font-medium text-slate-800">{check.check}</p>
-            <p className="text-xs text-slate-500">
-              {check.why}{' '}
-              <span className="rounded bg-white px-1 py-0.5 font-mono ring-1 ring-slate-200">{check.chunkId}</span>
-            </p>
+            <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{check.why}</p>
+            <span className="mt-1.5 inline-block rounded bg-white px-1.5 py-0.5 font-mono text-[11px] whitespace-nowrap text-slate-500 ring-1 ring-slate-200">
+              {check.chunkId}
+            </span>
           </li>
         ))}
       </ul>

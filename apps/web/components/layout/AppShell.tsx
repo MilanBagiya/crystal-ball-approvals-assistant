@@ -168,7 +168,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       <TopBar />
       <div className="flex min-h-0 flex-1">
         <SideNav />
-        <main className={`flex min-h-0 flex-1 flex-col overflow-auto p-3 sm:p-5 ${panelOpen ? 'xl:pr-[27rem]' : ''}`}>
+        <main
+          // Bottom padding keeps the last content clear of the round assistant button.
+          className={`flex min-h-0 flex-1 flex-col overflow-auto p-3 pb-24 sm:p-5 sm:pb-24 ${panelOpen ? 'xl:pr-[27rem]' : ''}`}
+        >
           {children}
         </main>
       </div>

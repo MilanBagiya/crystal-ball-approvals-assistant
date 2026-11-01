@@ -76,13 +76,13 @@ export function DecisionPanel({ item }: { item: ApprovalItem }) {
 
   if (!choice) {
     return (
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Decision">
+      <div className="flex flex-wrap gap-3" role="group" aria-label="Decision">
         {CHOICES.map(({ decision, label, icon: Icon, tone }) => (
           <button
             key={decision}
             type="button"
             onClick={() => pick(decision)}
-            className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 ${tone}`}
+            className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 ${tone}`}
           >
             <Icon aria-hidden="true" className="size-4" />
             {label}
@@ -93,7 +93,7 @@ export function DecisionPanel({ item }: { item: ApprovalItem }) {
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-slate-200 p-3">
+    <div className="flex flex-col gap-3 rounded-xl border border-slate-200 p-4">
       <label htmlFor={commentId} className="text-xs font-medium text-slate-600">
         Comment to {firstName} {needsComment ? '(required)' : '(optional)'}
       </label>
