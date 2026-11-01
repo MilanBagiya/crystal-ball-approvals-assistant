@@ -54,8 +54,8 @@ function TopBar() {
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6">
       <div className="leading-tight">
-        <p className="text-base font-bold tracking-tight text-slate-900">Digital Twin</p>
-        <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase">Site operations</p>
+        <p className="text-base font-bold tracking-tight text-slate-900">Crystal Ball</p>
+        <p className="text-[10px] font-semibold tracking-[0.18em] text-slate-500 uppercase">Command Centre</p>
       </div>
       <div className="flex items-center gap-1">
         <ResetDemoButton />
@@ -154,7 +154,7 @@ function StatusBar() {
         <span aria-hidden="true" className={`size-2 rounded-full ${dot}`} />
         {label}
       </span>
-      <span className="hidden sm:inline">© 2026 Digital Twin demo</span>
+      <span className="hidden sm:inline">Approvals AI Assistant · take-home demo</span>
       <span className="font-semibold tracking-wide text-violet-700">APPROVALS</span>
     </footer>
   );
