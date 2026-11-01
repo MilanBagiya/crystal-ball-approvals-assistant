@@ -2,15 +2,20 @@
 
 const CODE_FENCE = /^```[a-z]*\s*\n?([\s\S]*?)\n?\s*```$/i;
 
-/** Parses JSON, tolerating a markdown code fence around it. Returns undefined instead of throwing. */
+/**
+ * Parses JSON, tolerating a markdown code fence around it and an object wrapped in a one-item array (both common
+ * small-model habits). Returns undefined instead of throwing. The result still has to pass the caller's Zod schema.
+ */
 export function parseModelJson(text: string): unknown {
   const trimmed = text.trim();
   const unfenced = CODE_FENCE.exec(trimmed)?.[1] ?? trimmed;
+  let parsed: unknown;
   try {
-    return JSON.parse(unfenced) as unknown;
+    parsed = JSON.parse(unfenced);
   } catch {
     return undefined;
   }
+  return Array.isArray(parsed) && parsed.length === 1 ? (parsed[0] as unknown) : parsed;
 }
 
 /**
