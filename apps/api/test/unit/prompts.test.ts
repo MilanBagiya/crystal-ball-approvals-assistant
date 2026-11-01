@@ -13,7 +13,15 @@ const ranked = rankApprovals(seedApprovals());
 
 describe('prompt registry', () => {
   it('has one active, semver-versioned prompt per AI feature, keyed by its id', () => {
-    expect(Object.keys(activePrompts).sort()).toEqual(['greeting', 'help', 'review', 'summary', 'talk', 'teach']);
+    expect(Object.keys(activePrompts).sort()).toEqual([
+      'comment',
+      'greeting',
+      'help',
+      'review',
+      'summary',
+      'talk',
+      'teach',
+    ]);
     for (const [key, prompt] of Object.entries(activePrompts)) {
       expect(prompt.id).toBe(key);
       expect(prompt.version).toMatch(/^\d+\.\d+\.\d+$/);
