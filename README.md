@@ -1,6 +1,6 @@
-# Approvals AI Assistant
+# Crystal Ball Command Centre: Approvals AI Assistant
 
-A working rebuild of the **"Approvals" assistant panel** from a digital-twin dashboard. A Next.js page shows the
+Take-home assignment for **Sr. Fullstack Developer, MERN + AI (Wave 2)**. A working rebuild of the **"Approvals" assistant panel** from a digital-twin dashboard. A Next.js page shows the
 approvals queue with a floating assistant; an Express API calls Claude server-side. The panel has five actions:
 
 | Action                 | What it does                                                      | Output                                      |
@@ -40,6 +40,75 @@ reply is validated, and each has a deterministic fallback.
 ![The Dashboard with the AI daily briefing, status counts and deadlines](docs/screenshots/dashboard.png)
 
 **Reset demo data** in the top bar undoes every decision (the queue lives in memory, so a restart does the same).
+
+## Requirements checklist
+
+Each line of the brief, and where to find it. ✅ done · ⏳ still to do · ➖ optional, not done.
+
+**§1 The panel and its five actions**
+
+- ✅ Panel matching the reference: avatar and header, action cards, close button →
+  [`AssistantPanel.tsx`](apps/web/components/assistant/AssistantPanel.tsx)
+- ✅ 🧾 **Present me Summary**: the queue ranked by urgency, as text or read aloud, in the operator's language →
+  [`summaryService.ts`](apps/api/src/services/summaryService.ts), [`ReadAloudButton.tsx`](apps/web/components/assistant/ReadAloudButton.tsx)
+- ✅ 💬 **Talk to me**: multi-turn chat about the queue → [`chatService.ts`](apps/api/src/services/chatService.ts)
+- ✅ 📚 **Help me**: answers only from the policy note → [`helpService.ts`](apps/api/src/services/helpService.ts)
+- ✅ 🎓 **Teach me**: step-by-step review guide that adapts to follow-ups → [`teach.v1.1.ts`](apps/api/src/prompts/teach.v1.1.ts)
+- ✅ 👋 **Replay Greeting**: regenerated each time, with the live pending count →
+  [`greetingService.ts`](apps/api/src/services/greetingService.ts)
+
+**§2 Reference data**
+
+- ✅ 📦 The four queue items seeded in the repo → [`data/approvals.json`](data/approvals.json)
+- ✅ 📄 Policy note in my own words (200–400 words) → [`data/policy.md`](data/policy.md)
+- ✅ 🔎 Keyword retrieval over 5 chunks, no pgvector → [`retrieval.ts`](apps/api/src/domain/retrieval.ts)
+
+**§3 Technical requirements**
+
+- ✅ ⚛️ React + Next.js (App Router), with visible loading and error states → [`apps/web`](apps/web)
+- ✅ 🌊 Token-by-token streaming over SSE → [`sseClient.ts`](apps/web/lib/sseClient.ts), [`sse.ts`](apps/api/src/http/sse.ts)
+- ✅ 🗃️ Zustand for conversation and session state, no prop-drilling → [`assistantStore.ts`](apps/web/store/assistantStore.ts)
+- ✅ 🟩 Node.js + Express, TypeScript strict mode → [`apps/api`](apps/api)
+- ✅ 📐 Zod schemas written before the routes → [`packages/contracts`](packages/contracts/src), [`openapi.md`](packages/contracts/openapi.md)
+- ✅ 🔐 Claude through the Anthropic SDK, server-side only; the key never reaches the browser →
+  [`AnthropicLlmClient.ts`](apps/api/src/llm/AnthropicLlmClient.ts). Not run with a live key (see §2 Testing); a free
+  local model (Ollama) runs behind the same interface.
+- ✅ 🧱 Summary and greeting return JSON validated with Zod before reaching the UI, never regex-parsed →
+  [`summaryParser.ts`](apps/api/src/services/summaryParser.ts)
+- ✅ 🏷️ Versioned prompts in `prompts/*.ts`, none inline in routes → [`apps/api/src/prompts`](apps/api/src/prompts) (§8)
+- ✅ ⏱️ 8 s timeout on every LLM call, and a fallback answer instead of a 500 or a frozen UI →
+  [`withTimeout.ts`](apps/api/src/llm/withTimeout.ts) (§3)
+- ✅ 🚦 Per-session rate limiting with `express-rate-limit`, plus a per-IP cap → [`rateLimit.ts`](apps/api/src/http/rateLimit.ts)
+
+**§4 Testing**
+
+- ✅ 🔴🟢 Test-first: each feature has a failing `test(...) (red)` commit before its `feat(...) (green)` commit
+- ✅ 🧪 Jest unit tests of the prompt and response handlers, with the LLM mocked → [`apps/api/test/unit`](apps/api/test/unit)
+- ✅ 🔌 Supertest integration tests for every AI endpoint, success and fallback or timeout →
+  [`apps/api/test/integration`](apps/api/test/integration)
+- ✅ 🖥️ Vitest + Testing Library: the chat panel's loading, streaming and error states →
+  [`ChatView.test.tsx`](apps/web/test/ChatView.test.tsx)
+- ✅ 🛡️ Tests catch a broken AI response shape and a silent LLM failure → [`summaryParser.test.ts`](apps/api/test/unit/summaryParser.test.ts),
+  [`withTimeout.test.ts`](apps/api/test/unit/withTimeout.test.ts)
+
+**§5 Deliverables**
+
+- ✅ 📝 Clear setup instructions → [§1 Setup](#1-setup)
+- ✅ 🧠 AI-necessary vs. AI-unnecessary, fallback design and one thing to do differently, in 241 words →
+  [§5 AI judgment note](#5-ai-judgment-note)
+- ⏳ 🐙 GitHub repo link, sent in reply to the assignment thread
+- ➖ 🎥 Loom walkthrough (optional)
+- ➖ 🌐 Hosted demo (optional; runs locally)
+
+**§6 How it will be evaluated**
+
+- ✅ 🔁 Killing the API key or forcing a timeout degrades gracefully → [§3](#3-seeing-the-graceful-degradation)
+- ✅ 📜 Small, readable commits that show how the work got there, not one squashed commit
+
+**§7 Logistics**
+
+- ✅ 🤖 Where AI tools were used → [§7 AI tool usage](#7-ai-tool-usage)
+- ✅ ❓ Ambiguous requirements raised, with the assumptions made → [§6](#6-assumptions-and-challenged-requirements)
 
 ## 1. Setup
 
@@ -98,7 +167,7 @@ npm run lint           # ESLint (no `any` allowed)
 npm run format:check   # Prettier
 ```
 
-Current totals: **365 API tests and 79 web tests**. Coverage: API 96.6% statements / 85.4% branches, web 93.3% /
+Current totals: **365 API tests and 80 web tests**. Coverage: API 96.6% statements / 85.4% branches, web 93.3% /
 82.8%. Every feature was built test-first: the history shows a failing `test(...) (red)` commit before each
 `feat(...) (green)` commit.
 
@@ -197,17 +266,18 @@ Express: rate limit ─▶ Zod body validation ─▶ route ─▶ service ─�
 ```
 apps/
   api/src/
-    routes/        thin Express handlers (system: health, approvals; ai: greeting, summary, help, chat)
+    routes/        thin Express handlers: system (health), approvals (queue, decisions, reset), dashboard, ai
     http/          Zod validation, SSE helper, error handler, rate limiter
-    services/      greeting, summary (+ NDJSON parser), help, chat
-    domain/        urgency ranking, policy chunks, retrieval, greeting template, summary fallbacks
-    llm/           LlmClient interface, Anthropic and unavailable clients, timeouts, runner, usage log
+    services/      greeting, summary (+ NDJSON parser), help, chat, review, comment, briefing, search
+    domain/        urgency, queue and decisions, dashboard deadlines, policy chunks, retrieval, templates, fallbacks
+    llm/           LlmClient interface, Anthropic, Ollama and unavailable clients, timeouts, runner, usage log
     prompts/       versioned prompts and the active-version registry
     content/       static Teach fallback guide
   web/
-    components/    assistant panel and views, approvals table
+    app/           the Approvals page (/) and the Dashboard (/dashboard)
+    components/    assistant panel and views, approvals workspace and detail pane, dashboard, app shell
     store/         Zustand store
-    lib/           SSE client
+    lib/           SSE client, formatting helpers
 packages/contracts/  Zod schemas + types shared by both apps, and openapi.md (the endpoint contract)
 data/                approvals.json (seed queue) and policy.md (the Help source)
 ```
