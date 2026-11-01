@@ -14,6 +14,7 @@ const ranked = rankApprovals(seedApprovals());
 describe('prompt registry', () => {
   it('has one active, semver-versioned prompt per AI feature, keyed by its id', () => {
     expect(Object.keys(activePrompts).sort()).toEqual([
+      'briefing',
       'comment',
       'greeting',
       'help',
