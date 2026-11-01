@@ -1,13 +1,15 @@
 import {
   ChatRequestSchema,
+  CommentDraftRequestSchema,
+  CommentDraftResponseSchema,
   GreetingRequestSchema,
   GreetingResponseSchema,
   HelpRequestSchema,
   ReviewRequestSchema,
   ReviewResponseSchema,
   SummaryRequestSchema,
+  type ApprovalItem,
 } from '@approvals/contracts';
-import type { ApprovalItem } from '@approvals/contracts';
 import { Router } from 'express';
 import type { ApprovalQueue } from '../domain/approvalQueue';
 import { HttpError } from '../http/errorHandler';
@@ -15,6 +17,7 @@ import { pipeSse } from '../http/pipeSse';
 import { sendJson, validateBody } from '../http/validate';
 import type { Logger } from '../logging/logger';
 import type { ChatService } from '../services/chatService';
+import type { CommentService } from '../services/commentService';
 import type { GreetingService } from '../services/greetingService';
 import type { HelpService } from '../services/helpService';
 import type { ReviewService } from '../services/reviewService';
@@ -26,6 +29,7 @@ export interface AiServices {
   help: HelpService;
   chat: ChatService;
   review: ReviewService;
+  comment: CommentService;
 }
 
 // Thin handlers: validate the body, call a service, send a validated response. No prompts, no LLM calls here.
@@ -64,6 +68,19 @@ export function aiRoutes(services: AiServices, logger: Logger, queue: ApprovalQu
     '/review',
     validateBody(ReviewRequestSchema, async (body, _req, res) => {
       sendJson(res, ReviewResponseSchema, await services.review.review(pendingItem(queue, body.itemId)));
+    }),
+  );
+
+  router.post(
+    '/comment',
+    validateBody(CommentDraftRequestSchema, async (body, _req, res) => {
+      const item = pendingItem(queue, body.itemId);
+      const draft = await services.comment.draft({
+        item,
+        decision: body.decision,
+        ...(body.notes ? { notes: body.notes } : {}),
+      });
+      sendJson(res, CommentDraftResponseSchema, draft);
     }),
   );
 

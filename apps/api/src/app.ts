@@ -14,6 +14,7 @@ import { aiRoutes, type AiServices } from './routes/ai';
 import { approvalRoutes } from './routes/approvals';
 import { systemRoutes } from './routes/system';
 import { createChatService } from './services/chatService';
+import { createCommentService } from './services/commentService';
 import { createGreetingService } from './services/greetingService';
 import { createHelpService } from './services/helpService';
 import { createReviewService } from './services/reviewService';
@@ -48,6 +49,7 @@ export function createApp(deps: AppDeps): Express {
     help: createHelpService({ runner, policyChunks: deps.policyChunks }),
     chat: createChatService({ runner, listApprovals, policyChunks: deps.policyChunks }),
     review: createReviewService({ runner, policyChunks: deps.policyChunks }),
+    comment: createCommentService({ runner, policyChunks: deps.policyChunks }),
   };
 
   app.use('/api', systemRoutes({ llm: deps.llm }));

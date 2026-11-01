@@ -14,7 +14,11 @@ const policyChunks = chunkPolicy(fs.readFileSync(POLICY_FILE, 'utf8'));
 const video = seedApprovals().find((i) => i.id === 'a2')!;
 const NOTES = 'Faces visible at 0:42; resolution looks low.';
 
-function draft(llm: LlmClient, notes: string | undefined = NOTES, decision: 'request_changes' | 'reject' = 'request_changes') {
+function draft(
+  llm: LlmClient,
+  notes: string | undefined = NOTES,
+  decision: 'request_changes' | 'reject' = 'request_changes',
+) {
   const runner = createLlmRunner({ llm, timeoutMs: 50, logUsage: () => undefined });
   return createCommentService({ runner, policyChunks }).draft({ item: video, decision, ...(notes ? { notes } : {}) });
 }
@@ -36,7 +40,8 @@ describe('commentTemplate', () => {
 
 describe('commentService', () => {
   it('returns the AI draft when it is valid', async () => {
-    const comment = 'Hi Alex, thanks for the demo video. Please blur the faces visible at 0:42 and re-export it at 720p or higher.';
+    const comment =
+      'Hi Alex, thanks for the demo video. Please blur the faces visible at 0:42 and re-export it at 720p or higher.';
 
     const result = CommentDraftResponseSchema.parse(await draft(fakeLlm([JSON.stringify({ comment })])));
 
@@ -61,7 +66,10 @@ describe('commentService', () => {
   ])('uses the template for %s', async (_label, output) => {
     const result = await draft(fakeLlm([output]));
 
-    expect(result).toEqual({ comment: commentTemplate({ item: video, decision: 'request_changes', notes: NOTES }), source: 'template' });
+    expect(result).toEqual({
+      comment: commentTemplate({ item: video, decision: 'request_changes', notes: NOTES }),
+      source: 'template',
+    });
   });
 
   it.each([
