@@ -2,6 +2,7 @@ import { ApprovalItemSchema } from '@approvals/contracts';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import HomePage from '@/app/page';
+import { HEALTH_POLL_MS } from '@/components/layout/AppShell';
 import { resetAssistantStore, useAssistantStore } from '@/store/assistantStore';
 import { jsonResponse, routeFetch, seedApprovals } from './helpers/fakeFetch';
 
@@ -29,6 +30,30 @@ describe('branding', () => {
     expect(screen.getByText('Command Centre')).toBeInTheDocument();
     expect(screen.getByText(/Approvals AI Assistant/)).toBeInTheDocument();
     expect(screen.queryByText(/Digital Twin/)).not.toBeInTheDocument();
+  });
+});
+
+describe('AI status', () => {
+  it('says the AI is unreachable when the provider is down', async () => {
+    renderHome({ '/api/health': () => jsonResponse(200, { ok: true, llm: 'unreachable' }) });
+
+    expect(await screen.findByText('AI unreachable: standard answers')).toBeInTheDocument();
+  });
+
+  it('checks again on its own, so stopping or starting the model shows without a reload', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      let llm = 'configured';
+      renderHome({ '/api/health': () => jsonResponse(200, { ok: true, llm }) });
+      expect(await screen.findByText('AI connected')).toBeInTheDocument();
+
+      llm = 'unreachable';
+      await vi.advanceTimersByTimeAsync(HEALTH_POLL_MS);
+
+      expect(await screen.findByText('AI unreachable: standard answers')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

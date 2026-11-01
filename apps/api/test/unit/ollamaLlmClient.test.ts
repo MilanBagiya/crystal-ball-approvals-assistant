@@ -144,3 +144,36 @@ describe('OllamaLlmClient.streamText', () => {
     expect(received).toEqual(['Partial']);
   });
 });
+
+describe('OllamaLlmClient.isReachable', () => {
+  // The health check asks Ollama for its model list: a cheap GET that needs no model loaded.
+  const pinging = (respond: () => Response | Error) => {
+    const urls: string[] = [];
+    const fetch = async (input: string | URL | Request): Promise<Response> => {
+      urls.push(String(input));
+      const result = respond();
+      if (result instanceof Error) throw result;
+      return result;
+    };
+    return { llm: new OllamaLlmClient({ baseUrl: 'http://ollama.test/', model: 'qwen2.5:3b', fetch }), urls };
+  };
+
+  it('is true when Ollama lists its models', async () => {
+    const { llm, urls } = pinging(() => json(200, { models: [] }));
+
+    await expect(llm.isReachable(signal())).resolves.toBe(true);
+    expect(urls).toEqual(['http://ollama.test/api/tags']);
+  });
+
+  it('is false when Ollama is not running', async () => {
+    const { llm } = pinging(() => new TypeError('fetch failed'));
+
+    await expect(llm.isReachable(signal())).resolves.toBe(false);
+  });
+
+  it('is false when Ollama answers with an error', async () => {
+    const { llm } = pinging(() => json(500, { error: 'boom' }));
+
+    await expect(llm.isReachable(signal())).resolves.toBe(false);
+  });
+});

@@ -1,6 +1,7 @@
 import { ApiErrorSchema, ApprovalsResponseSchema, HealthResponseSchema } from '@approvals/contracts';
 import request from 'supertest';
 import { UnavailableLlmClient } from '../../src/llm/UnavailableLlmClient';
+import { fakeLlm } from '../fakes/fakeLlm';
 import { buildTestApp } from '../fakes/testApp';
 
 describe('GET /api/health', () => {
@@ -15,6 +16,33 @@ describe('GET /api/health', () => {
     const { app } = buildTestApp({ llm: new UnavailableLlmClient('no_api_key') });
 
     expect((await request(app).get('/api/health')).body).toEqual({ ok: true, llm: 'not_configured' });
+  });
+
+  // A configured provider can still be down (e.g. Ollama stopped), so the status bar must not claim "connected".
+  const withPing = (isReachable: (signal: AbortSignal) => Promise<boolean>) =>
+    buildTestApp({ llm: Object.assign(fakeLlm([]), { isReachable }) }).app;
+
+  it('reports configured when the provider answers its reachability check', async () => {
+    const res = await request(withPing(async () => true)).get('/api/health');
+
+    expect(HealthResponseSchema.parse(res.body)).toEqual({ ok: true, llm: 'configured' });
+  });
+
+  it('reports unreachable when the provider is down', async () => {
+    const res = await request(withPing(async () => false)).get('/api/health');
+
+    expect(HealthResponseSchema.parse(res.body)).toEqual({ ok: true, llm: 'unreachable' });
+  });
+
+  it('reports unreachable, quickly, when the check hangs', async () => {
+    const hanging = (signal: AbortSignal) =>
+      new Promise<boolean>((resolve) => signal.addEventListener('abort', () => resolve(true)));
+    const started = Date.now();
+
+    const res = await request(withPing(hanging)).get('/api/health');
+
+    expect(res.body).toEqual({ ok: true, llm: 'unreachable' });
+    expect(Date.now() - started).toBeLessThan(3000);
   });
 });
 
