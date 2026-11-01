@@ -1,5 +1,6 @@
 import {
   ApiErrorSchema,
+  DecisionRequestSchema,
   ApprovalItemSchema,
   ApprovalQueueSchema,
   ChatMessageSchema,
@@ -165,5 +166,24 @@ describe('ApiErrorSchema', () => {
   it('accepts the error envelope and rejects a bare message', () => {
     expect(ApiErrorSchema.safeParse({ error: { code: 'invalid_request', message: 'Bad body' } }).success).toBe(true);
     expect(ApiErrorSchema.safeParse({ message: 'Bad body' }).success).toBe(false);
+  });
+});
+
+describe('DecisionRequestSchema', () => {
+  it.each([
+    ['approve without a comment', { decision: 'approve' }],
+    ['approve with a comment', { decision: 'approve', comment: 'All checks pass.' }],
+    ['request changes with a comment', { decision: 'request_changes', comment: 'Add the revision date.' }],
+  ])('accepts %s', (_label, body) => {
+    expect(DecisionRequestSchema.safeParse(body).success).toBe(true);
+  });
+
+  it.each([
+    ['an unknown decision', { decision: 'maybe' }],
+    ['reject without a comment', { decision: 'reject' }],
+    ['request changes with a blank comment', { decision: 'request_changes', comment: '   ' }],
+    ['a comment over 1000 characters', { decision: 'approve', comment: 'x'.repeat(1001) }],
+  ])('rejects %s', (_label, body) => {
+    expect(DecisionRequestSchema.safeParse(body).success).toBe(false);
   });
 });
