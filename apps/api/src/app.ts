@@ -16,6 +16,7 @@ import { systemRoutes } from './routes/system';
 import { createChatService } from './services/chatService';
 import { createGreetingService } from './services/greetingService';
 import { createHelpService } from './services/helpService';
+import { createReviewService } from './services/reviewService';
 import { createSummaryService } from './services/summaryService';
 
 export interface AppDeps {
@@ -46,12 +47,13 @@ export function createApp(deps: AppDeps): Express {
     summary: createSummaryService({ runner, listApprovals, logger: deps.logger }),
     help: createHelpService({ runner, policyChunks: deps.policyChunks }),
     chat: createChatService({ runner, listApprovals, policyChunks: deps.policyChunks }),
+    review: createReviewService({ runner, policyChunks: deps.policyChunks }),
   };
 
   app.use('/api', systemRoutes({ llm: deps.llm }));
   app.use('/api/approvals', approvalRoutes(queue));
   // Rate limiting runs first, so over-limit requests never reach validation or the LLM.
-  app.use('/api/ai', ...aiRateLimiters(deps.config.rateLimitPerMin), aiRoutes(services, deps.logger));
+  app.use('/api/ai', ...aiRateLimiters(deps.config.rateLimitPerMin), aiRoutes(services, deps.logger, queue));
 
   app.use(notFoundHandler);
   app.use(errorHandler(deps.logger));
