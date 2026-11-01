@@ -23,6 +23,24 @@ connected. More views: [summary with fallback items](docs/screenshots/panel-summ
 The layout follows the reference dashboard's structure, but uses an original name and Lucide icons instead of
 OomniEye's logo and illustrations.
 
+### Beyond the five actions
+
+The rest of the page works too, with the same rules: code decides facts, the AI only writes text or filters, every AI
+reply is validated, and each has a deterministic fallback.
+
+| Feature                     | Where                    | AI's role, and why                                                                                                                               |
+| --------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Approve / reject**        | Detail pane              | **None.** A decision is the reviewer's, so the AI never makes or suggests one.                                                                   |
+| **AI pre-review**           | Detail pane              | Tailors a checklist to the item; each check must cite a policy section. Code sets the deadline. No verdict: it only sees metadata, not the file. |
+| **Draft with AI**           | Request changes / reject | Turns the reviewer's notes into a polite comment, which they edit before sending. No numbers beyond the notes and policy.                        |
+| **Dashboard**               | `/dashboard`             | **None** for the figures (counts, deadlines, overdue): that's arithmetic.                                                                        |
+| **Daily briefing**          | Dashboard                | Words the computed figures. It may not add numbers and must start with the item code chose.                                                      |
+| **Search in plain English** | Approvals page           | Turns "safety items from Sam" into a filter of known values; code applies it. One-word searches never call the AI.                               |
+
+![The Dashboard with the AI daily briefing, status counts and deadlines](docs/screenshots/dashboard.png)
+
+**Reset demo data** in the top bar undoes every decision (the queue lives in memory, so a restart does the same).
+
 ## 1. Setup
 
 Requirements: **Node 22+** (developed on Node 24) and npm 10+.
@@ -80,8 +98,8 @@ npm run lint           # ESLint (no `any` allowed)
 npm run format:check   # Prettier
 ```
 
-Current totals: **244 API tests and 45 web tests**. Coverage: API 96.6% statements / 86.3% branches, web 93.8% /
-83.5%. Every feature was built test-first: the history shows a failing `test(...) (red)` commit before each
+Current totals: **365 API tests and 79 web tests**. Coverage: API 96.6% statements / 85.4% branches, web 93.3% /
+82.8%. Every feature was built test-first: the history shows a failing `test(...) (red)` commit before each
 `feat(...) (green)` commit.
 
 **Live model testing.** Claude was not run live (no API key was used). The real Anthropic path is covered by SDK-level
@@ -269,8 +287,9 @@ check every view with screenshots, and to keep this README accurate.
 ## 8. Prompt versioning
 
 Prompts live only in [`apps/api/src/prompts/`](apps/api/src/prompts/), one file per prompt and version
-(`greeting.v1.ts`, `summary.v1.ts`, `help.v1.ts`, `talk.v1.ts`, `teach.v1.ts`, plus newer `*.v1.1.ts` and
-`greeting.v1.2.ts`). The active versions are greeting 1.2.0, summary, help and teach 1.1.0, and talk 1.0.0. Each exports an object with an `id`,
+(`greeting.v1.ts`, `summary.v1.1.ts`, `review.v1.ts`, …). Active versions: greeting 1.2.0; summary, help, teach and
+search 1.1.0; talk, review, comment and briefing 1.0.0. Every newer version came from a problem seen when running a
+small local model, recorded in the file's header comment. Each exports an object with an `id`,
 a semver `version`, the system prompt and a builder for the user message. [`prompts/index.ts`](apps/api/src/prompts/index.ts)
 is the registry of active versions.
 

@@ -144,3 +144,53 @@ Events: `token`…, then `done`. When the LLM is unavailable:
 - `talk`: `fallback` with "The assistant is unavailable right now. Here's the current queue in priority order:" followed
   by the ranked list.
 - `teach`: `fallback` with the static 5-step review guide.
+
+---
+
+## Review workflow and dashboard
+
+These endpoints go beyond the five panel actions. Decisions and dashboard figures are computed in code; the AI only
+writes text and filters, and every AI reply is validated with a deterministic fallback, like the actions above.
+The queue lives in memory: a restart (or `POST /api/approvals/reset`) puts every item back to pending.
+
+### `POST /api/approvals/:id/decision`
+
+Request: `DecisionRequestSchema`, `{ "decision": "approve" | "request_changes" | "reject", "comment"?: string }`. A
+comment (3–1000 characters) is required to request changes or reject.
+
+Response `200`: `DecisionResponseSchema`, `{ "item": ApprovalItem }`, with `status`, `reviewedAt` and `reviewComment`
+set. Errors: `404 not_found` for an unknown id, `409 already_decided` if the item was already reviewed.
+
+### `POST /api/approvals/reset`
+
+Puts every item back to its seeded state. Response `200`: `ApprovalsResponseSchema`.
+
+### `GET /api/dashboard`
+
+Response `200`: `DashboardSchema`. Counts by status, pending items by type, each pending item's deadline (submission
+date plus the policy SLA: 24 h for safety items, 72 h otherwise, with `hoursLeft` negative once overdue) most urgent
+first, and the five latest decisions. No AI.
+
+### `POST /api/ai/review`
+
+Request: `ReviewRequestSchema`, `{ "itemId": string }`. Response `200`: `ReviewResponseSchema`: the deadline (from code),
+`source: "ai" | "fallback"`, and 2–6 checks, each citing a policy section. Checks citing a section the item wasn't given,
+or quoting numbers the policy doesn't contain, are dropped. The AI never suggests approve or reject: it only sees the
+item's metadata. Errors: `404`, `409` as above.
+
+### `POST /api/ai/comment`
+
+Request: `CommentDraftRequestSchema`, `{ "itemId", "decision": "request_changes" | "reject", "notes"?: string }`.
+Response `200`: `CommentDraftResponseSchema`, `{ "comment", "source": "ai" | "template" }`. The reviewer edits it before
+sending. A draft with numbers that aren't in the notes, the item or the policy falls back to the template.
+
+### `POST /api/ai/briefing`
+
+Response `200`: `BriefingResponseSchema`, `{ "briefing", "source": "ai" | "template" }`. The model words the dashboard
+figures; it may not add numbers and must name the item code chose to start with, or the template is used.
+
+### `POST /api/ai/search`
+
+Request: `SearchRequestSchema`, `{ "query": string }`. Response `200`: `SearchResponseSchema`, `{ "query", "filter",
+"itemIds", "source": "ai" | "keyword", "fallbackReason"? }`. A one-word query is a keyword match with no AI call. Otherwise
+the model returns a filter limited to known types, statuses, urgencies and submitters, and code works out `itemIds`.
