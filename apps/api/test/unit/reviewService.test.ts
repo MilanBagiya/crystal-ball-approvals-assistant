@@ -77,6 +77,17 @@ describe('reviewService', () => {
     expect(result.checks.map((c) => c.check)).toEqual(['Plays end to end', 'At least 720p resolution']);
   });
 
+  it('accepts the JSON object wrapped in a one-item array, a common small-model habit, still fully validated', async () => {
+    const wrapped = `[\n${modelReply([check('Plays end to end'), check('At least 720p resolution')])}\n]`;
+
+    const result = await review(fakeLlm([wrapped]), 'a2');
+
+    expect(result).toMatchObject({
+      source: 'ai',
+      checks: [{ check: 'Plays end to end' }, { check: 'At least 720p resolution' }],
+    });
+  });
+
   it('falls back to the policy checklist when too few valid checks are left', async () => {
     const result = await review(fakeLlm([modelReply([check('Only one check')])]), 'a2');
 
