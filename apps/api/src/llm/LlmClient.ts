@@ -19,4 +19,9 @@ export interface LlmClient {
   readonly model: string;
   streamText(args: LlmRequest, signal: AbortSignal): AsyncIterable<string>;
   completeText(args: LlmRequest, signal: AbortSignal): Promise<string>;
+  /**
+   * Optional cheap check that the provider is up, for the health endpoint. Clients without it (Anthropic: a
+   * hosted API that is up as long as the key is set) are treated as reachable.
+   */
+  isReachable?(signal: AbortSignal): Promise<boolean>;
 }

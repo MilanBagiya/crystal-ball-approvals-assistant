@@ -1,6 +1,6 @@
 'use client';
 
-import { HealthResponseSchema } from '@approvals/contracts';
+import { HealthResponseSchema, type HealthResponse } from '@approvals/contracts';
 import {
   BarChart3,
   Building2,
@@ -127,15 +127,22 @@ function SideNav() {
   );
 }
 
+/** How often the status bar re-checks, so a model that stops or starts shows up without a reload. */
+export const HEALTH_POLL_MS = 20_000;
+
 /** Shows whether the API has a working LLM, so a reviewer knows if they are seeing AI or standard answers. */
 function StatusBar() {
   const sessionId = useAssistantStore((s) => s.sessionId);
-  const [llm, setLlm] = useState<'configured' | 'not_configured' | 'offline'>();
+  const [llm, setLlm] = useState<HealthResponse['llm'] | 'offline'>();
 
   useEffect(() => {
-    void getJson('/api/health', HealthResponseSchema, { sessionId }).then((result) =>
-      setLlm(result.ok ? result.data.llm : 'offline'),
-    );
+    const check = () =>
+      void getJson('/api/health', HealthResponseSchema, { sessionId }).then((result) =>
+        setLlm(result.ok ? result.data.llm : 'offline'),
+      );
+    check();
+    const timer = setInterval(check, HEALTH_POLL_MS);
+    return () => clearInterval(timer);
   }, [sessionId]);
 
   const label =
@@ -143,10 +150,17 @@ function StatusBar() {
       ? 'AI connected'
       : llm === 'not_configured'
         ? 'AI off: standard answers'
-        : llm === 'offline'
-          ? 'API offline'
-          : 'Checking…';
-  const dot = llm === 'configured' ? 'bg-emerald-500' : llm === 'offline' ? 'bg-red-500' : 'bg-amber-400';
+        : llm === 'unreachable'
+          ? 'AI unreachable: standard answers'
+          : llm === 'offline'
+            ? 'API offline'
+            : 'Checking…';
+  const dot =
+    llm === 'configured'
+      ? 'bg-emerald-500'
+      : llm === 'offline' || llm === 'unreachable'
+        ? 'bg-red-500'
+        : 'bg-amber-400';
 
   return (
     <footer className="flex h-9 shrink-0 items-center justify-between border-t border-slate-200 bg-white px-4 text-xs text-slate-500 sm:px-6">

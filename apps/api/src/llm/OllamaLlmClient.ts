@@ -36,6 +36,16 @@ export class OllamaLlmClient implements LlmClient {
     this.fetchFn = options.fetch ?? fetch;
   }
 
+  /** Lists the installed models: cheap, and needs no model loaded. */
+  async isReachable(signal: AbortSignal): Promise<boolean> {
+    try {
+      const response = await this.fetchFn(`${this.baseUrl}/api/tags`, { signal });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
   async completeText(args: LlmRequest, signal: AbortSignal): Promise<string> {
     const response = await this.post(args, false, signal);
     const body = (await response.json()) as ChatChunk;
