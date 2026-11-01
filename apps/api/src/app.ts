@@ -19,6 +19,7 @@ import { createGreetingService } from './services/greetingService';
 import { createHelpService } from './services/helpService';
 import { createBriefingService } from './services/briefingService';
 import { createReviewService } from './services/reviewService';
+import { createSearchService } from './services/searchService';
 import { dashboardRoutes } from './routes/dashboard';
 import { createSummaryService } from './services/summaryService';
 
@@ -56,6 +57,7 @@ export function createApp(deps: AppDeps): Express {
     review: createReviewService({ runner, policyChunks: deps.policyChunks }),
     comment: createCommentService({ runner, policyChunks: deps.policyChunks }),
     briefing: createBriefingService({ runner }),
+    search: createSearchService({ runner, listApprovals }),
   };
 
   app.use('/api', systemRoutes({ llm: deps.llm }));

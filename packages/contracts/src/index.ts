@@ -10,3 +10,4 @@ export * from './health';
 export * from './review';
 export * from './comment';
 export * from './dashboard';
+export * from './search';

@@ -3,6 +3,7 @@ import { commentPromptV1 } from './comment.v1';
 import { greetingPromptV1_2 } from './greeting.v1.2';
 import { helpPromptV1_1 } from './help.v1.1';
 import { reviewPromptV1 } from './review.v1';
+import { searchPromptV1 } from './search.v1';
 import { summaryPromptV1_1 } from './summary.v1.1';
 import { talkPromptV1 } from './talk.v1';
 import { teachPromptV1_1 } from './teach.v1.1';
@@ -22,6 +23,7 @@ export const activePrompts = {
   review: reviewPromptV1,
   comment: commentPromptV1,
   briefing: briefingPromptV1,
+  search: searchPromptV1,
 } as const;
 
 export const promptRef = (prompt: { id: string; version: string }) => ({ id: prompt.id, version: prompt.version });

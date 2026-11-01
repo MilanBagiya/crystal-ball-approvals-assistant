@@ -33,6 +33,11 @@ export interface RankedApproval {
   keyword?: string;
 }
 
+/** The urgency an item's title implies, whatever its status (used by search, which also covers decided items). */
+export function urgencyOf(title: string): Urgency {
+  return TIER_URGENCY[classifyTier(title).tier];
+}
+
 export function classifyTier(title: string): TierMatch {
   const words = title.toLowerCase().split(/[^a-z0-9]+/);
 

@@ -8,6 +8,8 @@ import {
   HelpRequestSchema,
   ReviewRequestSchema,
   ReviewResponseSchema,
+  SearchRequestSchema,
+  SearchResponseSchema,
   SummaryRequestSchema,
   type ApprovalItem,
 } from '@approvals/contracts';
@@ -24,6 +26,7 @@ import type { CommentService } from '../services/commentService';
 import type { GreetingService } from '../services/greetingService';
 import type { HelpService } from '../services/helpService';
 import type { ReviewService } from '../services/reviewService';
+import type { SearchService } from '../services/searchService';
 import type { SummaryService } from '../services/summaryService';
 
 export interface AiServices {
@@ -34,6 +37,7 @@ export interface AiServices {
   review: ReviewService;
   comment: CommentService;
   briefing: BriefingService;
+  search: SearchService;
 }
 
 // Thin handlers: validate the body, call a service, send a validated response. No prompts, no LLM calls here.
@@ -44,6 +48,13 @@ export function aiRoutes(
   now: () => Date = () => new Date(),
 ): Router {
   const router = Router();
+
+  router.post(
+    '/search',
+    validateBody(SearchRequestSchema, async (body, _req, res) => {
+      sendJson(res, SearchResponseSchema, await services.search.search(body.query));
+    }),
+  );
 
   router.post('/briefing', async (_req, res) => {
     sendJson(res, BriefingResponseSchema, await services.briefing.brief(buildDashboard(queue.list(), now())));
