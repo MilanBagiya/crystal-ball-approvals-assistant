@@ -39,6 +39,11 @@ describe('briefingService', () => {
     // 3 is not one of the computed numbers: the model must not do its own counting.
     ['a briefing with a number that is not in the facts', JSON.stringify({ briefing: '3 items are overdue.' })],
     ['a briefing over 500 characters', JSON.stringify({ briefing: `4 items. ${'Busy day. '.repeat(60)}` })],
+    // Code decides where to start; a local model once sent the reviewer to the wrong (less overdue) item.
+    [
+      'a briefing that starts with a different item',
+      JSON.stringify({ briefing: '4 items are waiting, 1 overdue. Start with Level 2 Drone Patrol Video Demo.' }),
+    ],
   ])('uses the template for %s', async (_label, output) => {
     await expect(brief(fakeLlm([output]))).resolves.toEqual({ briefing: TEMPLATE, source: 'template' });
   });

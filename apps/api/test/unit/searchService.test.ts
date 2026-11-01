@@ -1,4 +1,5 @@
-import { SearchResponseSchema } from '@approvals/contracts';
+import { SearchFilterSchema, SearchResponseSchema } from '@approvals/contracts';
+import { activePrompts } from '../../src/prompts';
 import { createApprovalQueue } from '../../src/domain/approvalQueue';
 import { createLlmRunner } from '../../src/llm/llmRunner';
 import type { LlmClient } from '../../src/llm/LlmClient';
@@ -50,6 +51,24 @@ describe('searchService: when the AI is used', () => {
     expect(prompt).toContain('Elena HelpAdmin');
     expect(prompt).toMatch(/<question>\s*what did Elena send\s*<\/question>/);
     expect(llm.requests[0]?.system).toContain('pending_review');
+  });
+});
+
+describe('search prompt 1.1.0', () => {
+  // A small local model over-filled the 1.0.0 filter ("safety items from Sam" also got Video, two statuses...).
+  // Worked examples show it to include only what the request asks for.
+  it('is the active version and its worked examples are valid filters', () => {
+    expect(activePrompts.search.version).toBe('1.1.0');
+    const examples = [...activePrompts.search.system.matchAll(/=> (\{.*\})$/gm)].map(
+      (m) => JSON.parse(m[1]!) as unknown,
+    );
+
+    expect(examples.length).toBeGreaterThanOrEqual(3);
+    for (const example of examples) expect(SearchFilterSchema.safeParse(example).success).toBe(true);
+  });
+
+  it('does not use the demo queries as examples, so it learns the pattern rather than the answers', () => {
+    expect(activePrompts.search.system).not.toMatch(/safety items from Sam|videos still pending/i);
   });
 });
 

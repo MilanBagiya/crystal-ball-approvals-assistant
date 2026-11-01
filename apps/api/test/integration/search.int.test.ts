@@ -11,7 +11,7 @@ describe('POST /api/ai/search', () => {
 
     expect(res.status).toBe(200);
     expect(SearchResponseSchema.parse(res.body)).toMatchObject({ source: 'ai', itemIds: ['a4'] });
-    expect(usage).toMatchObject([{ promptId: 'search', promptVersion: '1.0.0', outcome: 'ok' }]);
+    expect(usage).toMatchObject([{ promptId: 'search', promptVersion: '1.1.0', outcome: 'ok' }]);
   });
 
   it('rejects an empty query', async () => {
