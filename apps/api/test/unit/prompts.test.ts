@@ -19,6 +19,7 @@ describe('prompt registry', () => {
       'greeting',
       'help',
       'review',
+      'search',
       'summary',
       'talk',
       'teach',
