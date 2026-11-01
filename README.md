@@ -198,24 +198,23 @@ See [`packages/contracts/openapi.md`](packages/contracts/openapi.md) for each en
 
 ## 5. AI judgment note
 
-<!-- TODO(Milan): this is a draft. Edit it into your own words before submitting. -->
+**AI-necessary.** _Talk to me_ and _Teach me_ are open-ended conversations: no template can answer a reviewer's own
+follow-up questions. _Help me_ needs a model to phrase the answer, but only from policy text that code retrieves first,
+and the model quotes the policy sentence before answering, so the answer stays checkable.
 
-**AI-necessary.** _Talk to me_ and _Teach me_ handle open-ended language and follow-ups; a template can't hold a
-conversation. _Help me_ needs the model to phrase a grounded answer, but only from retrieved policy text.
-
-**AI-optional.** _Replay Greeting_ is already complete as a template; the model only improves the tone, and its output
-is rejected if it changes any number. The _Summary ranking_ is decided in code by a documented rule, because the data
-can't support an AI judgment on urgency; the model only explains the order, and the server rejects any line whose id,
-rank or urgency differs from the rule.
+**AI-unnecessary.** The _Summary ranking_. The data has no priority field, so a documented rule in code decides the
+order; the model only explains it, and any line that changes an id, rank or urgency is rejected. The _greeting's_ facts
+also come from code: the model only rewords them, and a greeting with a changed number is rejected. Off-topic Help
+questions never reach the model at all.
 
 **Fallback design.** Every call has an 8 s budget: total for the greeting, and first-token plus idle timeouts for
-streams, so a slow but steady answer isn't cut off. Each action has its own deterministic fallback (template, ranked
-list, policy text, 5-step guide), and partial text stays visible when a stream fails. Structured output is validated with
-Zod on the server and SSE events again in the browser, so the UI never trusts raw model text. Help doesn't call the
-model at all when retrieval finds nothing relevant, which saves cost and stops it guessing.
+streams, so a slow but steady answer isn't cut off. Each action has a deterministic answer (template, ranked list,
+policy text, five-step guide) for no key, timeouts, errors or invalid output, and text already streamed stays visible.
+Model output passes Zod on the server and the event contract in the browser, so the UI never shows raw model text.
 
-**With more time:** a promptfoo eval suite that runs the summary and help prompts against fixed queues and questions on
-every prompt change, so a new prompt version has to beat the old one before it ships.
+**With more time:** an eval suite (e.g. promptfoo) that runs every prompt version against fixed queues and questions,
+so a new version must beat the old one before it ships. Testing against a small local model, which produced the 1.1.0
+prompts, showed how much that matters.
 
 ## 6. Assumptions and challenged requirements
 
@@ -245,20 +244,27 @@ every prompt change, so a new prompt version has to beat the old one before it s
 
 ## 7. AI tool usage
 
-<!-- TODO(Milan): check this draft is true for you, add what you designed or changed yourself, and remove this comment. -->
-
-Built with **Claude Code** from a plan I wrote ([`PLAN.md`](PLAN.md)): scope, stack, architecture, the five actions and
-their fallbacks, the test list and the TDD commit rhythm. Claude Code wrote the code and tests phase by phase, and I
-reviewed each phase before allowing the next.
+This project was built with **Claude Code** (Anthropic's coding agent), as the brief encourages. I gave it a plan
+([`PLAN.md`](PLAN.md)) covering the scope, stack, architecture, the five actions and their fallbacks, the test list and
+the test-first commit rhythm. Claude Code wrote the code, the tests and the drafts of this README (including the AI
+judgment note above) phase by phase, and I reviewed each phase before the next one started.
 
 Decisions I made along the way:
 
-- Added ESLint, Prettier and V8 coverage, which weren't in the original dependency list.
-- Kept contract and seed-data tests in the API package, so `packages/contracts` depends only on Zod.
-- Asked for configurable dev ports after port clashes on my machine, and for the panel to fit its content after
-  reviewing the UI in the browser.
+- Approved adding ESLint, Prettier and V8 coverage, which weren't in the original dependency list, and keeping contract
+  and seed-data tests in the API package so `packages/contracts` depends only on Zod.
+- Supplied the reference screen and asked for the page and panel to be rebuilt around its layout.
+- Chose not to pay for an API key for the take-home, and instead had a free local model (Ollama) added behind the same
+  `LlmClient` interface, keeping the Anthropic SDK as the default provider.
+- Tested the panel in the browser and reported what looked wrong: empty space in the panel, a greeting identical to the
+  template, markdown and prompt details in Teach replies, and the summary's fallback wording. Each became a fix or a new
+  prompt version.
+- Checked the build against the brief and asked for the two gaps it found: replies in the operator's language, and
+  reading the summary aloud.
+- Worked to the 24-hour deadline.
 
-_[Add anything else you designed, changed or rejected yourself.]_
+Claude Code was also used to debug (e.g. tracing a stalled local model to a game holding the GPU), to run the app and
+check every view with screenshots, and to keep this README accurate.
 
 ## 8. Prompt versioning
 
