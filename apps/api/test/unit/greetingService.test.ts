@@ -11,7 +11,11 @@ const TEMPLATE = 'Good afternoon! You have 4 items waiting for review, including
 function service(llm: LlmClient) {
   const logs: LogEntry[] = [];
   const runner = createLlmRunner({ llm, timeoutMs: 50, logUsage: () => undefined });
-  const greeting = createGreetingService({ runner, approvals: seedApprovals(), logger: { log: (e) => logs.push(e) } });
+  const greeting = createGreetingService({
+    runner,
+    listApprovals: () => seedApprovals(),
+    logger: { log: (e) => logs.push(e) },
+  });
   return { greet: () => greeting.greet({ localTime: '14:05' }), logs };
 }
 

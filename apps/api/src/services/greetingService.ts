@@ -17,16 +17,22 @@ const normalise = (text: string) => text.trim().replace(/\s+/g, ' ').toLowerCase
 
 // AI-optional: the template is already a complete greeting. The model only improves the tone,
 // and anything short of a valid, fact-preserving answer falls back to the template.
-export function createGreetingService(deps: { runner: LlmRunner; approvals: readonly ApprovalItem[]; logger: Logger }) {
+export function createGreetingService(deps: {
+  runner: LlmRunner;
+  /** Read on every request, so decisions made since startup are reflected. */
+  listApprovals: () => readonly ApprovalItem[];
+  logger: Logger;
+}) {
   const prompt = activePrompts.greeting;
 
   return {
     async greet(input: GreetingRequest, signal?: AbortSignal): Promise<GreetingResponse> {
+      const approvals = deps.listApprovals();
       const template = buildGreetingTemplate({
-        items: deps.approvals,
+        items: approvals,
         ...(input.localTime ? { localTime: input.localTime } : {}),
       });
-      const mostUrgentTitle = rankApprovals(deps.approvals)[0]?.item.title;
+      const mostUrgentTitle = rankApprovals(approvals)[0]?.item.title;
       const fallback = (reason: FallbackReason): GreetingResponse => {
         deps.logger.log({ level: 'warn', event: 'greeting_fallback', reason });
         return { greeting: template, source: 'template' };

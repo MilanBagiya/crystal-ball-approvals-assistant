@@ -2,6 +2,7 @@ import type { ApprovalItem } from '@approvals/contracts';
 import cors from 'cors';
 import express, { type Express } from 'express';
 import type { AppConfig } from './config/config';
+import { createApprovalQueue } from './domain/approvalQueue';
 import type { PolicyChunk } from './domain/policyChunks';
 import { errorHandler, notFoundHandler } from './http/errorHandler';
 import { aiRateLimiters } from './http/rateLimit';
@@ -34,15 +35,19 @@ export function createApp(deps: AppDeps): Express {
   app.use(cors({ origin: 'http://localhost:3000' }));
   app.use(express.json({ limit: '32kb' }));
 
+  // The queue lives in memory for the life of the process; decisions update it (a restart resets the demo).
+  const queue = createApprovalQueue(deps.approvals);
+  const listApprovals = () => queue.list();
+
   const runner = createLlmRunner({ llm: deps.llm, timeoutMs: deps.config.llmTimeoutMs, logUsage: deps.logUsage });
   const services: AiServices = {
-    greeting: createGreetingService({ runner, approvals: deps.approvals, logger: deps.logger }),
-    summary: createSummaryService({ runner, approvals: deps.approvals, logger: deps.logger }),
+    greeting: createGreetingService({ runner, listApprovals, logger: deps.logger }),
+    summary: createSummaryService({ runner, listApprovals, logger: deps.logger }),
     help: createHelpService({ runner, policyChunks: deps.policyChunks }),
-    chat: createChatService({ runner, approvals: deps.approvals, policyChunks: deps.policyChunks }),
+    chat: createChatService({ runner, listApprovals, policyChunks: deps.policyChunks }),
   };
 
-  app.use('/api', systemRoutes(deps));
+  app.use('/api', systemRoutes({ llm: deps.llm, listApprovals }));
   // Rate limiting runs first, so over-limit requests never reach validation or the LLM.
   app.use('/api/ai', ...aiRateLimiters(deps.config.rateLimitPerMin), aiRoutes(services, deps.logger));
 

@@ -6,12 +6,16 @@ import { activePrompts, promptRef } from '../prompts';
 import { summaryEvents } from './summaryParser';
 
 // The ranking is computed here, in code. The model only writes the headline and per-item reasons.
-export function createSummaryService(deps: { runner: LlmRunner; approvals: readonly ApprovalItem[]; logger: Logger }) {
+export function createSummaryService(deps: {
+  runner: LlmRunner;
+  listApprovals: () => readonly ApprovalItem[];
+  logger: Logger;
+}) {
   const prompt = activePrompts.summary;
 
   return {
     stream(input: SummaryRequest, signal: AbortSignal): AsyncIterable<StreamEvent> {
-      const ranked = rankApprovals(deps.approvals);
+      const ranked = rankApprovals(deps.listApprovals());
       const modelChunks = deps.runner.stream(
         {
           system: prompt.system,

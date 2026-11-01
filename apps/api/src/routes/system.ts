@@ -4,7 +4,7 @@ import { sendJson } from '../http/validate';
 import type { LlmClient } from '../llm/LlmClient';
 import { UnavailableLlmClient } from '../llm/UnavailableLlmClient';
 
-export function systemRoutes(deps: { llm: LlmClient; approvals: readonly ApprovalItem[] }): Router {
+export function systemRoutes(deps: { llm: LlmClient; listApprovals: () => readonly ApprovalItem[] }): Router {
   const router = Router();
 
   router.get('/health', (_req, res) => {
@@ -14,7 +14,7 @@ export function systemRoutes(deps: { llm: LlmClient; approvals: readonly Approva
 
   // The UI reads the queue from here rather than importing the data file.
   router.get('/approvals', (_req, res) => {
-    sendJson(res, ApprovalsResponseSchema, { items: [...deps.approvals] });
+    sendJson(res, ApprovalsResponseSchema, { items: [...deps.listApprovals()] });
   });
 
   return router;

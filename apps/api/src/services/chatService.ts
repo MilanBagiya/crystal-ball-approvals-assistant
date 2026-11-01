@@ -13,12 +13,12 @@ export const TALK_UNAVAILABLE = "The assistant is unavailable right now. Here's 
 // the queue and policy are injected here, server-side, so the client can't change the context.
 export function createChatService(deps: {
   runner: LlmRunner;
-  approvals: readonly ApprovalItem[];
+  listApprovals: () => readonly ApprovalItem[];
   policyChunks: readonly PolicyChunk[];
 }) {
   return {
     stream(input: ChatRequest, signal: AbortSignal): AsyncIterable<StreamEvent> {
-      const ranked = rankApprovals(deps.approvals);
+      const ranked = rankApprovals(deps.listApprovals());
       const prompt = activePrompts[input.mode];
       const fallback =
         input.mode === 'teach' ? formatTeachFallback : () => `${TALK_UNAVAILABLE}\n\n${formatRankedQueue(ranked)}`;
